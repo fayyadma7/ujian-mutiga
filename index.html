@@ -2167,10 +2167,9 @@
             const kelas = document.getElementById('kelas').value;
             const mapelSelect = document.getElementById('mapel');
             if (!kelas) { mapelSelect.innerHTML = '<option value="">— Pilih Kelas Dahulu —</option>'; return; }
-            if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbx2K_1rffEVbQ4iq7leZfNvQUfwD4jWoJkx3jlzOznAT5lm0SmpHP3a0HgeXohpirKkxA/exec") {
-                alert("PENTING: Masukkan URL Web App Apps Script ke dalam variabel SCRIPT_URL di dalam kode index.html!");
+            if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbx2K_1rffEVbQ4iq7leZfNvQUfwD4jWoJkx3jlzOznAT5lm0SmpHP3a0HgeXohpirKkxA/exec")
                 return;
-            }
+        }
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
