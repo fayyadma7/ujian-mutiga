@@ -2302,26 +2302,46 @@
                 kirimSinyalAktif(false);
             };
 
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: "getSoal", namaSheet: m })
-            })
-                .then(response => response.json())
-                .then(res => {
-                    if (res.success) {
-                        startHandler(res.data);
-                    } else {
-                        tampilkanErrorJaringan("Gagal memuat soal: " + res.error);
-                        btnMulai.disabled = false;
-                        btnMulai.innerHTML = "Ya, Mulai!";
-                    }
+            let attemptGet = 0;
+            const maxAttemptsGet = 5;
+
+            const sendGetRequest = () => {
+                attemptGet++;
+                if (attemptGet > 1) {
+                    btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptGet}/${maxAttemptsGet})...`;
+                }
+
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: "getSoal", namaSheet: m })
                 })
-                .catch(err => {
-                    tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengambil soal.");
-                    btnMulai.disabled = false;
-                    btnMulai.innerHTML = "Ya, Mulai!";
-                });
+                    .then(response => response.json())
+                    .then(res => {
+                        if (res.success) {
+                            startHandler(res.data);
+                        } else {
+                            if (attemptGet < maxAttemptsGet) {
+                                setTimeout(sendGetRequest, 2500);
+                            } else {
+                                tampilkanErrorJaringan("Gagal memuat soal: " + res.error);
+                                btnMulai.disabled = false;
+                                btnMulai.innerHTML = "Ya, Mulai!";
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        if (attemptGet < maxAttemptsGet) {
+                            setTimeout(sendGetRequest, 2500);
+                        } else {
+                            tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengambil soal.");
+                            btnMulai.disabled = false;
+                            btnMulai.innerHTML = "Ya, Mulai!";
+                        }
+                    });
+            };
+
+            sendGetRequest();
         }
 
         function updateTimer() {
@@ -2594,31 +2614,51 @@
                 window.scrollTo(0, 0);
             };
 
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: "simpanJawaban",
-                    data: { nama: n, kelas: k, mapel: m, jawaban: jwb, pelanggaran: p_count, durasi: dur }
+            let attemptSubmit = 0;
+            const maxAttemptsSubmit = 5;
+
+            const sendSubmitRequest = () => {
+                attemptSubmit++;
+                if (attemptSubmit > 1) {
+                    btnSelesai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptSubmit}/${maxAttemptsSubmit})...`;
+                }
+
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: "simpanJawaban",
+                        data: { nama: n, kelas: k, mapel: m, jawaban: jwb, pelanggaran: p_count, durasi: dur }
+                    })
                 })
-            })
-                .then(response => response.json())
-                .then(res => {
-                    if (res.success) {
-                        successHandler();
-                    } else {
-                        tampilkanErrorJaringan("Gagal menyimpan jawaban: " + res.error);
-                        document.getElementById('overlaySubmit').style.display = 'none';
-                        btnSelesai.disabled = false;
-                        btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
-                    }
-                })
-                .catch(err => {
-                    tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengirim jawaban.");
-                    document.getElementById('overlaySubmit').style.display = 'none';
-                    btnSelesai.disabled = false;
-                    btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
-                });
+                    .then(response => response.json())
+                    .then(res => {
+                        if (res.success) {
+                            successHandler();
+                        } else {
+                            if (attemptSubmit < maxAttemptsSubmit) {
+                                setTimeout(sendSubmitRequest, 2500);
+                            } else {
+                                tampilkanErrorJaringan("Gagal menyimpan jawaban setelah mencoba " + maxAttemptsSubmit + " kali: " + res.error);
+                                document.getElementById('overlaySubmit').style.display = 'none';
+                                btnSelesai.disabled = false;
+                                btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        if (attemptSubmit < maxAttemptsSubmit) {
+                            setTimeout(sendSubmitRequest, 2500);
+                        } else {
+                            tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengirim jawaban setelah mencoba " + maxAttemptsSubmit + " kali.");
+                            document.getElementById('overlaySubmit').style.display = 'none';
+                            btnSelesai.disabled = false;
+                            btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
+                        }
+                    });
+            };
+
+            sendSubmitRequest();
         }
 
         let isViolating = false;
