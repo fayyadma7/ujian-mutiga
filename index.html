@@ -2246,7 +2246,7 @@
             const selectedOption = mapelSelect.options[mapelSelect.selectedIndex];
             const waktuMenit = selectedOption.dataset.waktu ? parseInt(selectedOption.dataset.waktu) : 90;
 
-            const idUser = n.replace(/\\s/g, '') + "_" + m.replace(/\\s/g, '');
+            const idUser = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
 
             const keyWaktu = "waktu_mulai_" + idUser;
             const keyUrutan = "urutan_" + idUser;
@@ -2417,7 +2417,7 @@
 
         function saveProgress() {
             const n = document.getElementById('nama').value, m = document.getElementById('mapel').value;
-            const key = "asas_" + n.replace(/\\s/g, '') + "_" + m.replace(/\\s/g, '');
+            const key = "asas_" + n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
             let jwb = [];
             s_data.forEach((_, i) => {
                 let el = document.getElementsByName('q' + i);
@@ -2431,7 +2431,7 @@
 
         function loadProgress() {
             const n = document.getElementById('nama').value, m = document.getElementById('mapel').value;
-            const key = "asas_" + n.replace(/\\s/g, '') + "_" + m.replace(/\\s/g, '');
+            const key = "asas_" + n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
             const saved = JSON.parse(localStorage.getItem(key));
             if (saved) {
                 saved.forEach((v, i) => {
@@ -2568,7 +2568,7 @@
             const dur = Math.floor((new Date() - t_start) / 60000) + " menit";
 
             const successHandler = () => {
-                const idUser = n.replace(/\\s/g, '') + "_" + m.replace(/\\s/g, '');
+                const idUser = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
                 localStorage.removeItem("asas_" + idUser);
                 localStorage.removeItem("waktu_mulai_" + idUser);
                 localStorage.removeItem("pelanggaran_" + idUser);
