@@ -11,6 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap"
         rel="stylesheet">
     <link rel="icon" type="image/png" href="assets/logo-mute.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         window.MathJax = {
@@ -191,6 +192,8 @@
             flex-direction: column;
             background: var(--navy);
             transition: opacity 0.7s ease, transform 0.7s ease;
+            pointer-events: all;
+            /* Biarkan interaksi aktif, introOverlay yang menutupi */
         }
 
         #landing-page.exit {
@@ -222,7 +225,8 @@
             position: absolute;
             inset: 0;
             background: linear-gradient(to top, rgba(6, 14, 31, 1) 0%, rgba(11, 29, 58, 0.8) 40%, rgba(19, 41, 82, 0.3) 100%);
-            z-index: 2;
+            z-index: 1;
+            /* Turunkan prioritas agar tidak menumpuk */
         }
 
         .top-bar {
@@ -639,17 +643,20 @@
             inset: 0;
             z-index: 9000;
             display: flex;
+            /* Flex agar konten bisa di-center, visibilitas dikontrol opacity */
             align-items: center;
             justify-content: center;
             background: var(--navy);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.4s ease;
+            visibility: hidden;
         }
 
         #transition-overlay.active {
             opacity: 1;
             pointer-events: all;
+            visibility: visible;
         }
 
         .loader-ring {
@@ -1488,7 +1495,10 @@
         #modalBelumLengkap,
         #modalKonfirmasiSubmit,
         #modalBiodataKosong,
-        #modalErrorJaringan {
+        #modalErrorJaringan,
+        #modalSudahSelesai,
+        #modalPeringatan5Menit,
+        #modalWaktuHabis {
             position: fixed;
             top: 0;
             left: 0;
@@ -1502,30 +1512,71 @@
             backdrop-filter: blur(6px);
         }
 
-        #introOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(6, 14, 31, 0.98);
-            z-index: 100000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(10px);
+        /* Countdown angka animasi */
+        @keyframes countdownPop {
+            0% {
+                transform: scale(1.4);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
+        .countdown-digit {
+            animation: countdownPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        /* Icon pulse gold */
+        @keyframes pulseGold {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 12px rgba(245, 158, 11, 0);
+            }
+        }
+
+        .icon-pulse-gold {
+            animation: pulseGold 1.4s ease infinite;
+        }
+
+        /* Icon pulse red */
+        @keyframes pulseRed {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .icon-pulse-red {
+            animation: pulseRed 0.8s ease infinite;
+        }
+
+
+
         .modal-card {
-            background: rgba(11, 29, 58, 0.97);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 24px;
-            padding: 40px 36px;
+            background: rgba(11, 29, 58, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 28px;
+            padding: 40px;
             max-width: 440px;
-            margin: 20px;
+            width: 90%;
             text-align: center;
-            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
-            animation: modalSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            animation: cardReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
 
         @keyframes modalSlide {
@@ -1790,10 +1841,42 @@
                 padding: 4px 8px;
             }
         }
+
+        /* Tunda animasi landing page hingga overlay diklik */
+        body:not(.anim-started) .top-bar,
+        body:not(.anim-started) .hero-left,
+        body:not(.anim-started) .hero-right,
+        body:not(.anim-started) .login-card-wrap,
+        body:not(.anim-started) .particle {
+            animation-play-state: paused !important;
+        }
     </style>
 </head>
 
 <body>
+
+    <!-- OVERLAY LAYAR PENUH (GERBANG PERTAMA) -->
+    <div id="start-overlay"
+        style="position: fixed; inset: 0; background: rgba(6, 14, 31, 0.95); z-index: 999999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s;">
+        <div class="modal-card"
+            style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); max-width: 480px; padding: 48px 40px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1);">
+            <img src="assets/logo-mute.png" style="width: 80px; margin: 0 auto 24px; display: block;"
+                alt="Logo Sekolah">
+            <div
+                style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
+                SMK Muhammadiyah 3 Purbalingga</div>
+            <div class="modal-title" style="font-size: 28px; margin-bottom: 16px;">Mode Layar Penuh</div>
+            <div class="modal-text"
+                style="font-size: 15px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 32px;">Platform
+                Ujian CBT ini mewajibkan mode <b>Layar Penuh (Fullscreen)</b> untuk menjaga objektivitas dan mencegah
+                kecurangan. Silakan masuk untuk melanjutkan.</div>
+            <button class="btn-modal-confirm"
+                style="width: 100%; padding: 16px; font-size: 16px; font-weight: 700; letter-spacing: 0.5px;"
+                onclick="masukAplikasi()">
+                Masuk Ujian Sekarang <span style="margin-left: 8px; font-size: 18px; line-height: 1;">&rarr;</span>
+            </button>
+        </div>
+    </div>
 
     <div class="bg-scene"></div>
     <div class="bg-grid"></div>
@@ -1801,19 +1884,7 @@
     <div class="bg-orb orb-2"></div>
     <div class="bg-orb orb-3"></div>
 
-    <div id="introOverlay">
-        <div class="modal-card">
-            <img src="assets/logo-mute.png" style="width: 72px; margin: 0 auto 10px; display: block;" alt="Logo">
-            <div
-                style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px;">
-                SMK Muhammadiyah 3 Purbalingga</div>
-            <div class="modal-title">Selamat Datang</div>
-            <div class="modal-text">Ujian Online mewajibkan mode Layar Penuh (Fullscreen) untuk meminimalisir
-                kecurangan. Silakan klik tombol di bawah untuk masuk.</div>
-            <button class="btn-modal-confirm" style="width: 100%; padding: 14px;" onclick="masukLayarPenuh()"><i
-                    class="fas fa-expand" style="margin-right: 8px;"></i>Masuk Layar Penuh</button>
-        </div>
-    </div>
+
 
     <div id="landing-page">
         <div class="landing-bg-wrap">
@@ -1936,7 +2007,7 @@
             </div>
         </nav>
 
-        <div id="overlay">
+        <div id="overlay" style="display: none;">
             <div class="overlay-card">
                 <div class="overlay-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="overlay-title">Peringatan!</div>
@@ -1986,6 +2057,58 @@
             </div>
         </div>
 
+        <!-- ===== MODAL: PERINGATAN 5 MENIT TERSISA ===== -->
+        <div id="modalPeringatan5Menit">
+            <div class="modal-card">
+                <div class="modal-icon icon-pulse-gold"
+                    style="color:#FCD34D; background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); width:72px; height:72px; font-size:28px;">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="modal-title" style="color:#FCD34D;">⏳ Waktu Hampir Habis!</div>
+                <div class="modal-text">
+                    Tersisa <strong style="color:#FCD34D; font-size:18px;">5 menit</strong> untuk menyelesaikan
+                    ujianmu.<br>
+                    Segera periksa dan isi jawaban yang masih kosong!
+                    <div id="warn5-soal-kosong"
+                        style="margin-top:14px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:700; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);">
+                    </div>
+                </div>
+                <button class="btn-modal-confirm" onclick="tutupModal5Menit()"
+                    style="background:linear-gradient(135deg,#F59E0B,#FCD34D); color:#0B1D3A; width:100%; font-size:15px; padding:14px; box-shadow: 0 6px 20px rgba(245,158,11,0.4);">
+                    <i class="fas fa-bolt" style="margin-right:8px;"></i>Lanjut Kerjakan!
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== MODAL: WAKTU HABIS + COUNTDOWN AUTO-SUBMIT ===== -->
+        <div id="modalWaktuHabis">
+            <div class="modal-card" style="max-width:400px;">
+                <div class="modal-icon icon-pulse-red"
+                    style="color:#ef4444; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.4); width:76px; height:76px; font-size:30px;">
+                    <i class="fas fa-stopwatch"></i>
+                </div>
+                <div class="modal-title" style="color:#ef4444;">Waktu Ujian Habis!</div>
+                <div class="modal-text">
+                    <div id="waktu-habis-info" style="margin-bottom:6px;"></div>
+                    Jawaban akan dikirim otomatis dalam:
+                </div>
+                <!-- Angka Countdown Besar -->
+                <div id="countdown-angka" class="countdown-digit"
+                    style="font-size:72px; font-weight:900; color:white; font-family:'Plus Jakarta Sans',sans-serif; line-height:1; margin-bottom:16px;">
+                    5</div>
+                <!-- Progress Bar Countdown -->
+                <div
+                    style="height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-bottom:20px; position:relative;">
+                    <div id="countdown-bar"
+                        style="height:100%; width:100%; border-radius:4px; background:linear-gradient(90deg,#ef4444,#f59e0b); transition:width 0.95s linear;">
+                    </div>
+                </div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.35); letter-spacing:0.5px;">
+                    <i class="fas fa-lock" style="margin-right:4px;"></i>Harap tetap di halaman ini...
+                </div>
+            </div>
+        </div>
+
         <div id="modalKonfirmasiSubmit">
             <div class="modal-card">
                 <div class="modal-icon"><i class="fas fa-paper-plane"></i></div>
@@ -2008,6 +2131,30 @@
                 <div class="modal-text" id="textErrorJaringan">Terjadi kesalahan jaringan atau server.</div>
                 <button class="btn-overlay" onclick="tutupModalErrorJaringan()"><i class="fas fa-check me-2"></i>OK,
                     Mengerti</button>
+            </div>
+        </div>
+
+        <div id="modalSudahSelesai">
+            <div class="modal-card"
+                style="border-color: rgba(239,68,68,0.25); box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(239,68,68,0.1);">
+                <div class="modal-icon"
+                    style="color: #FCA5A5; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3);">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div class="modal-title">Akses Ditolak</div>
+                <div class="modal-text" style="margin-bottom: 12px;">Kamu sudah menyelesaikan ujian ini sebelumnya.
+                </div>
+                <div
+                    style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 28px; font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6;">
+                    <i class="fas fa-info-circle" style="color: #FCA5A5; margin-right: 6px;"></i>
+                    Setiap siswa hanya diperbolehkan mengerjakan ujian <strong
+                        style="color: rgba(255,255,255,0.75);">satu kali</strong>. Hubungi pengawas jika ada masalah.
+                </div>
+                <button class="btn-overlay"
+                    style="background: linear-gradient(135deg, #991b1b, #EF4444); box-shadow: 0 8px 24px rgba(239,68,68,0.35);"
+                    onclick="document.getElementById('modalSudahSelesai').style.display='none'">
+                    <i class="fas fa-check me-2"></i>Saya Mengerti
+                </button>
             </div>
         </div>
 
@@ -2045,19 +2192,7 @@
                             <label class="login-field-label">Kelas</label>
                             <i class="fas fa-users login-field-icon"></i>
                             <select id="kelas" class="login-input" onchange="updateMapel()">
-                                <option value="">— Pilih Kelas —</option>
-                                <optgroup label="Akuntansi & Keuangan Lembaga">
-                                    <option value="X AKL A">X AKL A</option>
-                                    <option value="X AKL B">X AKL B</option>
-                                    <option value="XI LPBS">XI LPBS</option>
-                                </optgroup>
-                                <optgroup label="Teknologi Farmasi">
-                                    <option value="X TF A">X TF A</option>
-                                    <option value="X TF B">X TF B</option>
-                                    <option value="X TF C">X TF C</option>
-                                    <option value="XI LPK3 A">XI LPK3 A</option>
-                                    <option value="XI LPK3 B">XI LPK3 B</option>
-                                </optgroup>
+                                <option value="">— Memuat Daftar Kelas... —</option>
                             </select>
                         </div>
                         <div class="login-field">
@@ -2102,11 +2237,46 @@
         </form>
 
     </div>
+
     <script>
-        // =========================================================
-        // GANTI URL DI BAWAH INI DENGAN LINK WEB APP APPS SCRIPT MAS
-        // =========================================================
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2K_1rffEVbQ4iq7leZfNvQUfwD4jWoJkx3jlzOznAT5lm0SmpHP3a0HgeXohpirKkxA/exec";
+
+        /* ==================== INTI SISTEM ==================== */
+        console.log("Script Siswa Loaded - v1.1");
+
+        // Fungsi awal untuk masuk aplikasi dari start-overlay
+        function masukAplikasi() {
+            const elem = document.documentElement;
+            try {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen().catch(e => console.warn("FS ditolak"));
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            } catch (e) { console.error("Fullscreen error:", e); }
+
+            const overlay = document.getElementById('start-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.visibility = 'hidden';
+                    overlay.style.display = 'none';
+                    // Mulai animasi landing page setelah overlay hilang
+                    document.body.classList.add('anim-started');
+                }, 500);
+            }
+        }
+
+        const supabaseUrl = 'https://bkecjfrwqocguyvjymkn.supabase.co';
+        const supabaseKey = 'sb_publishable_4sQqxzUTiVhuf2h4SZCqNA_txpH0J8C';
+
+        let db;
+        if (typeof supabase !== 'undefined') {
+            db = supabase.createClient(supabaseUrl, supabaseKey);
+        } else {
+            console.error("Library Supabase gagal dimuat!");
+        }
 
         function formatNamaLengkap(input) {
             if (!input.value) return;
@@ -2161,11 +2331,96 @@
         }
 
         /* ==================== LOGIKA UJIAN ==================== */
-        let p_count = 0;
-        let s_data = [];
-        let t_start;
-        let timerInterval;
-        let hbInterval;
+        // --- State variabel utama ---
+        let p_count = 0;       // Jumlah pelanggaran siswa
+        let s_data = [];       // Data soal yang sudah diacak
+        let t_start;           // Waktu mulai ujian
+        let timerInterval;     // Interval countdown timer
+        let warningShown5Min = false; // Flag agar peringatan 5 menit hanya muncul sekali
+        let countdownInterval = null; // Interval untuk countdown auto-submit
+
+        // --- Alur sinyal ke Live Monitoring (Realtime Supabase) ---
+        // 1. INSERT 'MEMULAI...' → saat mulaiUjian() dipanggil (langsung)
+        // 2. UPDATE 'AKTIF'     → 15 detik setelah ujian dimulai (satu kali)
+        // 3. UPDATE 'PELANGGARAN' + pelanggaran++ → tiap kali tab ditinggal
+        // 4. UPDATE 'SELESAI'  → saat siswa submit jawaban
+        // Re-login: mulaiUjian() mendeteksi baris lama → UPDATE 'AKTIF' kembali
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadKelasAktif();
+        });
+
+        function loadKelasAktif() {
+            const kelasSelect = document.getElementById('kelas');
+
+            db.from('jadwal_ujian').select('kelas').eq('is_aktif', true)
+                .then(({ data, error }) => {
+                    if (error) throw error;
+
+                    kelasSelect.innerHTML = '<option value="">— Pilih Kelas —</option>';
+
+                    let mapJurusan = {};
+                    let hasSemuaKelas = false;
+
+                    data.forEach(j => {
+                        if (!j.kelas) {
+                            hasSemuaKelas = true;
+                            return;
+                        }
+
+                        let jurusan = "Daftar Kelas Ujian";
+                        let kelasString = j.kelas;
+
+                        if (kelasString.includes('::')) {
+                            const parts = kelasString.split('::');
+                            jurusan = parts[0].trim();
+                            kelasString = parts[1];
+                        }
+
+                        if (!mapJurusan[jurusan]) mapJurusan[jurusan] = new Set();
+
+                        kelasString.split(',').forEach(k => {
+                            if (k.trim()) mapJurusan[jurusan].add(k.trim().toUpperCase());
+                        });
+                    });
+
+                    for (const [jurusan, kelasSet] of Object.entries(mapJurusan)) {
+                        if (kelasSet.size === 0) continue;
+
+                        // Buat Header Jurusan (Disabled Option)
+                        const optHeader = document.createElement('option');
+                        optHeader.disabled = true;
+                        optHeader.style.background = "#0B1D3A";
+                        optHeader.style.color = "#FCD34D";
+                        optHeader.style.fontWeight = "bold";
+                        optHeader.style.textAlign = "center";
+                        optHeader.textContent = `─── ${jurusan.toUpperCase()} ───`;
+                        kelasSelect.appendChild(optHeader);
+
+                        [...kelasSet].sort().forEach(k => {
+                            const opt = document.createElement('option');
+                            opt.value = k;
+                            opt.textContent = k;
+                            opt.style.paddingLeft = "20px";
+                            kelasSelect.appendChild(opt);
+                        });
+
+                        // Spacer
+                        const spacer = document.createElement('option');
+                        spacer.disabled = true;
+                        spacer.textContent = "";
+                        kelasSelect.appendChild(spacer);
+                    }
+
+                    if (Object.keys(mapJurusan).length === 0 && !hasSemuaKelas) {
+                        kelasSelect.innerHTML = '<option value="">— Belum ada ujian aktif —</option>';
+                    }
+                })
+                .catch(err => {
+                    kelasSelect.innerHTML = '<option value="">— Gagal memuat kelas —</option>';
+                    console.error("Error load kelas:", err);
+                });
+        }
 
         window.onbeforeunload = function (e) {
             const isUjianMulai = document.getElementById('formUjian').style.display === 'block';
@@ -2180,26 +2435,35 @@
             const kelas = document.getElementById('kelas').value;
             const mapelSelect = document.getElementById('mapel');
             if (!kelas) { mapelSelect.innerHTML = '<option value="">— Pilih Kelas Dahulu —</option>'; return; }
-            mapelSelect.innerHTML = '<option value="">— Memuat mapel... —</option>';
+            db.from('jadwal_ujian').select('*')
+                .eq('is_aktif', true)
+                .then(({ data: listMapel, error }) => {
+                    if (error) throw error;
+                    const nowJs = new Date();
+                    const filtered = listMapel.filter(j => {
+                        // Cek rentang waktu di JS agar kebal terhadap isu Timezone (UTC vs Local)
+                        const tMulai = new Date(j.waktu_mulai);
+                        const tSelesai = new Date(j.waktu_selesai);
+                        if (nowJs < tMulai || nowJs > tSelesai) return false;
 
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: "getDaftarMapel", kelas: kelas })
-            })
-                .then(response => response.json())
-                .then(res => {
-                    const listMapel = res.data;
+                        if (!j.kelas) return true;
+                        let kelasString = j.kelas;
+                        if (kelasString.includes('::')) kelasString = kelasString.split('::')[1];
+                        return kelasString.split(',').map(k => k.trim().toLowerCase())
+                            .includes(kelas.trim().toLowerCase());
+                    });
                     mapelSelect.innerHTML = '<option value="">— Pilih Mata Pelajaran —</option>';
-                    if (listMapel && listMapel.length > 0) {
-                        listMapel.forEach(m => {
+                    if (filtered && filtered.length > 0) {
+                        filtered.forEach(m => {
                             let opt = document.createElement('option');
-                            opt.value = m.mapel; opt.innerHTML = m.mapel;
-                            opt.dataset.waktu = m.waktu;
+                            opt.value = m.mapel;
+                            opt.innerHTML = m.mapel;
+                            // Simpan durasi_menit (bukan waktu_selesai) sebagai dasar timer
+                            opt.dataset.durasi = m.durasi_menit || 90;
                             mapelSelect.appendChild(opt);
                         });
                     } else {
-                        mapelSelect.innerHTML = '<option value="">— Tidak Ada Ujian Aktif —</option>';
+                        mapelSelect.innerHTML = '<option value="">— Tidak Ada Ujian Aktif Saat Ini —</option>';
                     }
                 })
                 .catch(err => {
@@ -2219,7 +2483,22 @@
 
         function tutupModal() { document.getElementById('modalPeringatan').style.display = 'none'; }
 
-        function mulaiUjian() {
+        async function mulaiUjian() {
+            const n = document.getElementById('nama').value;
+            const m = document.getElementById('mapel').value;
+            const k = document.getElementById('kelas').value;
+
+            // --- VALIDASI AWAL: CEK APAKAH SUDAH SELESAI ---
+            const { data: sudahSelesai } = await db.from('jawaban_ujian')
+                .select('id').eq('nama', n).eq('kelas', k).eq('mapel', m)
+                .like('status', 'SELESAI%').maybeSingle();
+
+            if (sudahSelesai) {
+                tutupModal();
+                document.getElementById('modalSudahSelesai').style.display = 'flex';
+                return;
+            }
+
             const btnMulai = document.querySelector("#modalPeringatan .btn-modal-confirm");
             if (btnMulai.disabled) return;
             btnMulai.disabled = true;
@@ -2238,13 +2517,11 @@
             } catch (e) {
                 console.log("Fullscreen request failed:", e);
             }
-
-            const n = document.getElementById('nama').value;
-            const m = document.getElementById('mapel').value;
-            const k = document.getElementById('kelas').value;
             const mapelSelect = document.getElementById('mapel');
             const selectedOption = mapelSelect.options[mapelSelect.selectedIndex];
-            const waktuMenit = selectedOption.dataset.waktu ? parseInt(selectedOption.dataset.waktu) : 90;
+            // Ambil durasi dari jadwal (dalam menit), default 90 menit
+            const durasiMenit = parseInt(selectedOption.dataset.durasi) || 90;
+            window.durasiUjianDetik = durasiMenit * 60;
 
             const idUser = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
 
@@ -2252,7 +2529,7 @@
             const keyUrutan = "urutan_" + idUser;
             const keyDurasi = "durasi_" + idUser;
 
-            const startHandler = (data) => {
+            const startHandler = async (data) => {
                 tutupModal();
 
                 const savedUrutan = localStorage.getItem(keyUrutan);
@@ -2281,9 +2558,14 @@
                 if (savedStartTime) { t_start = new Date(savedStartTime); }
                 else { t_start = new Date(); localStorage.setItem(keyWaktu, t_start.toISOString()); }
 
+                // Gunakan sisa waktu yang sudah dihitung dari waktu_selesai jadwal
                 const savedDurasi = localStorage.getItem(keyDurasi);
-                if (savedDurasi) { window.durasiUjianDetik = parseInt(savedDurasi) * 60; }
-                else { window.durasiUjianDetik = waktuMenit * 60; localStorage.setItem(keyDurasi, waktuMenit); }
+                if (savedDurasi) {
+                    window.durasiUjianDetik = parseInt(savedDurasi);
+                } else {
+                    // window.durasiUjianDetik sudah di-set dari sisa waktu ujian (detik)
+                    localStorage.setItem(keyDurasi, window.durasiUjianDetik);
+                }
 
                 const savedP = localStorage.getItem("pelanggaran_" + idUser);
                 p_count = savedP ? parseInt(savedP) : 0;
@@ -2299,7 +2581,57 @@
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(updateTimer, 1000);
 
-                kirimSinyalAktif(false);
+                // Cek dulu apakah sudah ada baris untuk siswa ini (resume ujian)
+                const { data: existing } = await db.from('jawaban_ujian')
+                    .select('id').eq('nama', n).eq('kelas', k).eq('mapel', m)
+                    .not('status', 'like', 'SELESAI%').maybeSingle();
+
+                if (existing) {
+                    window.idRowUjian = existing.id;
+                    // Update status ke aktif jika resume
+                    await db.from('jawaban_ujian').update({
+                        status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID'),
+                        pelanggaran: p_count
+                    }).eq('id', window.idRowUjian);
+                } else {
+                    const { data: inserted } = await db.from('jawaban_ujian').insert([{
+                        created_at: new Date().toISOString(),
+                        nama: n, kelas: k, mapel: m,
+                        skor_pg: null, jawaban_essay: '',
+                        pelanggaran: p_count, durasi: '-',
+                        status: 'MEMULAI...'
+                    }]).select('id').single();
+                    if (inserted) window.idRowUjian = inserted.id;
+                }
+
+                // Setelah 15 detik, update status ke AKTIF
+                setTimeout(async () => {
+                    if (window.idRowUjian && document.getElementById('formUjian').style.display === 'block') {
+                        await db.from('jawaban_ujian').update({
+                            status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID')
+                        }).eq('id', window.idRowUjian);
+                    }
+                }, 15000);
+
+                // Auto-sync jawaban essay setiap 60 detik
+                setInterval(async () => {
+                    if (window.idRowUjian && document.getElementById('formUjian').style.display === 'block') {
+                        let jawabanEssaySync = [];
+                        s_data.forEach((s, i) => {
+                            if (s[8] === "ESSAY") {
+                                let val = document.getElementById('essay-' + i)?.value || "";
+                                if (val) jawabanEssaySync.push("No." + (i + 1) + ": " + val);
+                            }
+                        });
+
+                        if (jawabanEssaySync.length > 0) {
+                            await db.from('jawaban_ujian').update({
+                                jawaban_essay: jawabanEssaySync.join("\n")
+                            }).eq('id', window.idRowUjian);
+                            console.log("Auto-sync: Jawaban essay berhasil dicadangkan.");
+                        }
+                    }
+                }, 60000);
             };
 
             let attemptGet = 0;
@@ -2311,30 +2643,37 @@
                     btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptGet}/${maxAttemptsGet})...`;
                 }
 
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: "getSoal", namaSheet: m })
-                })
-                    .then(response => response.json())
-                    .then(res => {
-                        if (res.success) {
-                            startHandler(res.data);
+                db.from('bank_soal').select('*').eq('mapel', m).order('id', { ascending: true })
+                    .then(({ data, error }) => {
+                        if (error) throw error;
+
+                        // Mapping kolom Supabase ke format array yang dipakai renderSoal:
+                        // s[0]=pertanyaan, s[1]=opsiA, s[2]=B, s[3]=C, s[4]=D, s[5]=E, s[7]=kunci, s[8]=tipe
+                        let formattedData = data.map((row) => {
+                            return [
+                                row.pertanyaan || "",    // s[0] = teks soal
+                                row.opsi_a || "",        // s[1] = Opsi A
+                                row.opsi_b || "",        // s[2] = Opsi B
+                                row.opsi_c || "",        // s[3] = Opsi C
+                                row.opsi_d || "",        // s[4] = Opsi D
+                                row.opsi_e || "",        // s[5] = Opsi E
+                                "",                      // s[6] = (tidak dipakai)
+                                row.kunci_jawaban || "", // s[7] = Kunci Jawaban
+                                row.tipe_soal || "PG"    // s[8] = Tipe Soal
+                            ];
+                        });
+
+                        if (formattedData.length > 0) {
+                            startHandler(formattedData);
                         } else {
-                            if (attemptGet < maxAttemptsGet) {
-                                setTimeout(sendGetRequest, 2500);
-                            } else {
-                                tampilkanErrorJaringan("Gagal memuat soal: " + res.error);
-                                btnMulai.disabled = false;
-                                btnMulai.innerHTML = "Ya, Mulai!";
-                            }
+                            throw new Error("Soal untuk mata pelajaran ini belum ada di database.");
                         }
                     })
                     .catch(err => {
                         if (attemptGet < maxAttemptsGet) {
                             setTimeout(sendGetRequest, 2500);
                         } else {
-                            tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengambil soal.");
+                            tampilkanErrorJaringan("Gagal memuat soal: " + err.message);
                             btnMulai.disabled = false;
                             btnMulai.innerHTML = "Ya, Mulai!";
                         }
@@ -2354,8 +2693,14 @@
             if (t_left <= 0) {
                 clearInterval(timerInterval);
                 timerBox.innerText = "00:00";
-                submitJawaban(true);
+                timerBox.className = 'danger';
+                tampilkanWaktuHabis(); // ← Tampilkan modal countdown sebelum auto-submit
             } else {
+                // Peringatan 5 menit — hanya muncul satu kali
+                if (t_left <= 300 && !warningShown5Min) {
+                    warningShown5Min = true;
+                    tampilkanPeringatan5Menit();
+                }
                 let min = Math.floor(t_left / 60);
                 let sec = t_left % 60;
                 timerBox.innerText = `${min}:${sec < 10 ? '0' + sec : sec}`;
@@ -2363,6 +2708,87 @@
                 if (t_left <= 300) timerBox.className = 'danger';
                 else if (t_left <= 600) timerBox.className = 'warning';
             }
+        }
+
+        // Hitung soal yang belum dijawab
+        function hitungSoalKosong() {
+            let kosong = 0, nomorKosong = [];
+            s_data.forEach((_, i) => {
+                let el = document.getElementsByName('q' + i);
+                if (!el || !el[0]) return;
+                let jawaban = '';
+                if (el[0].type === 'radio') {
+                    let sel = Array.from(el).find(r => r.checked);
+                    jawaban = sel ? sel.value : '';
+                } else {
+                    jawaban = el[0].value.trim();
+                }
+                if (!jawaban) { kosong++; nomorKosong.push(i + 1); }
+            });
+            return { kosong, nomorKosong };
+        }
+
+        // Modal Peringatan 5 Menit
+        function tampilkanPeringatan5Menit() {
+            const { kosong, nomorKosong } = hitungSoalKosong();
+            const elInfo = document.getElementById('warn5-soal-kosong');
+            if (kosong > 0) {
+                const tampilNomor = nomorKosong.slice(0, 8).join(', ') + (nomorKosong.length > 8 ? ` ...+${nomorKosong.length - 8} lainnya` : '');
+                elInfo.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#ef4444; margin-right:6px;"></i>
+                    <span style="color:#ef4444;">${kosong} soal belum dijawab:</span><br>
+                    <span style="color:rgba(255,255,255,0.6); font-weight:400;">No. ${tampilNomor}</span>`;
+            } else {
+                elInfo.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981; margin-right:6px;"></i>
+                    <span style="color:#10b981;">Semua soal sudah dijawab! 🎉</span>`;
+            }
+            document.getElementById('modalPeringatan5Menit').style.display = 'flex';
+        }
+
+        function tutupModal5Menit() {
+            document.getElementById('modalPeringatan5Menit').style.display = 'none';
+            try { document.documentElement.requestFullscreen?.(); } catch (e) { }
+        }
+
+        // Modal Waktu Habis + Countdown 5 Detik
+        function tampilkanWaktuHabis() {
+            const { kosong } = hitungSoalKosong();
+            const elInfo = document.getElementById('waktu-habis-info');
+            if (kosong > 0) {
+                elInfo.innerHTML = `<span style="color:#ef4444; font-weight:700;">⚠️ ${kosong} soal belum dijawab akan dikirim apa adanya.</span>`;
+            } else {
+                elInfo.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ Semua soal sudah dijawab!</span>`;
+            }
+
+            document.getElementById('modalWaktuHabis').style.display = 'flex';
+
+            let sisa = 5;
+            const elAngka = document.getElementById('countdown-angka');
+            const elBar = document.getElementById('countdown-bar');
+
+            // Mulai progress bar shrink
+            elAngka.textContent = sisa;
+            elAngka.classList.remove('countdown-digit');
+            void elAngka.offsetWidth; // force reflow
+            elAngka.classList.add('countdown-digit');
+            elBar.style.width = '100%';
+
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                sisa--;
+                elBar.style.width = ((sisa / 5) * 100) + '%';
+
+                // Animasi angka
+                elAngka.classList.remove('countdown-digit');
+                void elAngka.offsetWidth;
+                elAngka.classList.add('countdown-digit');
+                elAngka.textContent = sisa > 0 ? sisa : '...';
+
+                if (sisa <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('modalWaktuHabis').style.display = 'none';
+                    submitJawaban(true); // ← Auto-submit setelah countdown
+                }
+            }, 1000);
         }
 
         function renderSoal(data) {
@@ -2471,18 +2897,19 @@
             }
         }
 
+        // Kirim sinyal ke Supabase (langsung → Realtime ke admin monitoring)
+        // Dipanggil: saat pelanggaran terjadi (isViolation=true)
         function kirimSinyalAktif(isViolation = false) {
-            const n = document.getElementById('nama').value, k = document.getElementById('kelas').value, m = document.getElementById('mapel').value;
-            if (n && m && document.getElementById('formUjian').style.display === 'block') {
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: "updateStatusAktif",
-                        data: { nama: n, kelas: k, mapel: m, pelanggaran: p_count, isViolation: isViolation }
-                    })
-                }).catch(err => console.error("Gagal kirim sinyal aktif:", err));
+            if (!window.idRowUjian) return;
+            const updateData = { pelanggaran: p_count };
+            if (isViolation) {
+                updateData.status = 'PELANGGARAN - ' + new Date().toLocaleTimeString('id-ID');
+            } else {
+                updateData.status = 'AKTIF - ' + new Date().toLocaleTimeString('id-ID');
             }
+            db.from('jawaban_ujian').update(updateData).eq('id', window.idRowUjian)
+                .then(() => console.log('[Monitor] Sinyal terkirim:', updateData.status))
+                .catch(err => console.error('[Monitor] Gagal kirim sinyal:', err));
         }
 
         function submitJawaban(auto) {
@@ -2607,7 +3034,7 @@
               <i class="fas fa-check"></i>
             </div>
             <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:white;margin-bottom:12px;">Jawaban Terkirim!</div>
-            <div style="font-size:14px;color:rgba(255,255,255,0.55);line-height:1.7;margin-bottom:8px;">Jawaban berhasil masuk ke database SMK Muhammadiyah 3 Purbalingga.</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.55);line-height:1.7;margin-bottom:8px;">Jawaban berhasil masuk ke database <span style="white-space:nowrap;">SMK Muhammadiyah 3 Purbalingga.</span></div>
             <div style="font-size:13px;color:rgba(255,255,255,0.35);">Terima kasih, <strong style="color:rgba(255,255,255,0.7);">${n}</strong>. Kamu boleh menutup halaman ini.</div>
           </div>
         </div>`;
@@ -2623,34 +3050,60 @@
                     btnSelesai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptSubmit}/${maxAttemptsSubmit})...`;
                 }
 
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: "simpanJawaban",
-                        data: { nama: n, kelas: k, mapel: m, jawaban: jwb, pelanggaran: p_count, durasi: dur }
-                    })
-                })
-                    .then(response => response.json())
-                    .then(res => {
-                        if (res.success) {
-                            successHandler();
-                        } else {
-                            if (attemptSubmit < maxAttemptsSubmit) {
-                                setTimeout(sendSubmitRequest, 2500);
-                            } else {
-                                tampilkanErrorJaringan("Gagal menyimpan jawaban setelah mencoba " + maxAttemptsSubmit + " kali: " + res.error);
-                                document.getElementById('overlaySubmit').style.display = 'none';
-                                btnSelesai.disabled = false;
-                                btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
-                            }
+                // 1. KOREKSI JAWABAN OTOMATIS (Karena Supabase tidak punya script backend)
+                let skorPG = 0;
+                let totalPG = 0;
+                let jawabanEssay = [];
+
+                s_data.forEach((s, i) => {
+                    let jwbSiswa = jwb[i] || "";
+                    let kunci = s[7] || "";
+                    let tipe = s[8] || "PG";
+
+                    if (tipe === "PG") {
+                        totalPG++;
+                        if (String(jwbSiswa).trim().toUpperCase() === String(kunci).trim().toUpperCase()) {
+                            skorPG++;
                         }
+                    } else {
+                        jawabanEssay.push("No." + (i + 1) + ": " + jwbSiswa);
+                    }
+                });
+
+                const hasilSkor = totalPG > 0 ? Math.round((skorPG / totalPG) * 100) : 0;
+                const statusSelesai = "SELESAI - " + new Date().toLocaleTimeString('id-ID');
+
+                // 2. UPDATE BARIS DI SUPABASE (baris sudah ada sejak mulai ujian)
+                const payloadSelesai = {
+                    skor_pg: hasilSkor,
+                    jawaban_essay: jawabanEssay.join("\n"),
+                    pelanggaran: p_count,
+                    durasi: dur,
+                    status: statusSelesai
+                };
+
+                let dbPromise;
+                if (window.idRowUjian) {
+                    // UPDATE baris yang sudah ada (dibuat saat mulai)
+                    dbPromise = db.from('jawaban_ujian').update(payloadSelesai).eq('id', window.idRowUjian);
+                } else {
+                    // Fallback: INSERT jika id tidak tersimpan (misal reload halaman)
+                    dbPromise = db.from('jawaban_ujian').insert([{
+                        created_at: new Date().toISOString(),
+                        nama: n, kelas: k, mapel: m, ...payloadSelesai
+                    }]);
+                }
+
+                dbPromise
+                    .then(({ error }) => {
+                        if (error) throw error;
+                        successHandler();
                     })
                     .catch(err => {
                         if (attemptSubmit < maxAttemptsSubmit) {
                             setTimeout(sendSubmitRequest, 2500);
                         } else {
-                            tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengirim jawaban setelah mencoba " + maxAttemptsSubmit + " kali.");
+                            tampilkanErrorJaringan("Gagal menyimpan jawaban: " + err.message);
                             document.getElementById('overlaySubmit').style.display = 'none';
                             btnSelesai.disabled = false;
                             btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
@@ -2708,15 +3161,6 @@
             }
         }
 
-        function masukLayarPenuh() {
-            const elem = document.documentElement;
-            try {
-                if (elem.requestFullscreen) elem.requestFullscreen();
-                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-                else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
-            } catch (e) { }
-            document.getElementById('introOverlay').style.display = 'none';
-        }
     </script>
 
 </body>

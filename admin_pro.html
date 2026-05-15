@@ -1,0 +1,2699 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - SMK Muhammadiyah 3 Purbalingga</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/fayyadma7/ujian-mutiga/main/assets/logo-mute.png?v=1">
+    <link rel="shortcut icon"
+        href="https://raw.githubusercontent.com/fayyadma7/ujian-mutiga/main/assets/logo-mute.png?v=1">
+
+    <!-- Font Inter & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Library Supabase & Excel Parser (SheetJS) & Word Parser (Mammoth) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Library MathJax untuk merender rumus Matematika -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        /* TEMA WARNA: SMK Muhammadiyah 3 Purbalingga */
+        :root {
+            --primary: #1A56DB;
+            /* Biru Utama (Dari web ujian) */
+            --primary-hover: #132952;
+            /* Navy Mid */
+            --sidebar-bg: #0B1D3A;
+            /* Navy (Dari web ujian) */
+            --sidebar-hover: #1a3468;
+            /* Navy Light */
+            --gold: #F59E0B;
+            /* Emas/Kuning (Dari web ujian) */
+            --gold-light: #FCD34D;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --border-color: #e2e8f0;
+            /* Alias untuk kompatibilitas */
+            --danger: #ef4444;
+            /* Merah bahaya */
+            --success: #10b981;
+            /* Hijau sukses */
+            --navy-dark: #0B1D3A;
+            /* Alias sidebar-bg */
+            --navy-mid: #1A56DB;
+            /* Alias primary */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* ======== SIDEBAR ======== */
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar.collapsed .brand-text,
+        .sidebar.collapsed .nav-links span {
+            opacity: 0;
+            visibility: hidden;
+            width: 0;
+            display: none;
+            /* Kita gunakan none untuk benar-benar menghilangkan dari flow */
+        }
+
+        /* Saat collapsed, atur agar konten tetap di tengah */
+        .sidebar.collapsed .nav-links a {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        .sidebar.collapsed .nav-links i {
+            margin-right: 0;
+            font-size: 1.25rem;
+        }
+
+        .sidebar-brand {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            height: 100px;
+            transition: all 0.3s;
+        }
+
+        .sidebar-brand img {
+            width: 48px;
+            filter: drop-shadow(0 2px 8px rgba(245, 158, 11, 0.4));
+            flex-shrink: 0;
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        .brand-text .title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.2;
+        }
+
+        .brand-text .subtitle {
+            font-size: 0.65rem;
+            color: var(--gold-light);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+
+        .nav-links {
+            list-style: none;
+            padding: 16px 0;
+            flex: 1;
+        }
+
+        .nav-links li {
+            padding: 4px 12px;
+        }
+
+        .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: #cbd5e1;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .nav-links a span {
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+
+        .nav-links a i {
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .nav-links a:hover {
+            background-color: var(--sidebar-hover);
+            color: white;
+        }
+
+        .nav-links a.active {
+            background-color: var(--primary);
+            color: white;
+            border-left: 4px solid var(--gold);
+        }
+
+        /* ======== MAIN CONTENT ======== */
+        .main-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        header {
+            background-color: var(--card-bg);
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: var(--gold);
+            color: var(--sidebar-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .content-area {
+            padding: 32px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .page-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ======== CARDS ======== */
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: 0.2s;
+            border-top: 4px solid var(--primary);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card:nth-child(2) {
+            border-top-color: var(--gold);
+        }
+
+        .stat-card:nth-child(3) {
+            border-top-color: #10b981;
+        }
+
+        .icon-box {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .icon-blue {
+            background-color: #eff6ff;
+            color: var(--primary);
+        }
+
+        .icon-gold {
+            background-color: #fef3c7;
+            color: var(--gold);
+        }
+
+        .icon-green {
+            background-color: #d1fae5;
+            color: #10b981;
+        }
+
+        .stat-info h4 {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .stat-info h2 {
+            font-size: 1.8rem;
+            color: var(--text-main);
+        }
+
+        .card-panel {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--sidebar-bg);
+        }
+
+        /* ======== BUTTONS ======== */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background-color: #f1f5f9;
+        }
+
+        .btn-danger {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+
+        /* ======== TABLES ======== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background-color: #eff6ff;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        /* ======== FORMS & UPLOAD ======== */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            outline: none;
+        }
+
+        /* === TOAST SYSTEM (unified) === */
+        .form-control:focus {
+            border-color: var(--primary);
+        }
+
+        .upload-area {
+            border: 2px dashed #94a3b8;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: var(--gold);
+            background: #fefce8;
+        }
+
+        .upload-area i {
+            font-size: 2.5rem;
+            color: var(--gold);
+            margin-bottom: 16px;
+        }
+
+        /* ======== TOGGLE SWITCH ======== */
+        .toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle input {
+            display: none;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #334155;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-slider:before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 4px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle input:checked+.toggle-slider {
+            background: #10b981;
+        }
+
+        .toggle input:checked+.toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .upload-area input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* ======== TOAST NOTIFIKASI ======== */
+        #toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+            min-width: 300px;
+            max-width: 420px;
+            pointer-events: auto;
+            position: relative;
+            overflow: hidden;
+            /* Start off-screen right */
+            transform: translateX(calc(100% + 24px));
+            opacity: 0;
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.45s ease;
+        }
+
+        .toast.toast-show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast.toast-hide {
+            transform: translateX(calc(100% + 24px));
+            opacity: 0;
+            transition: transform 0.4s ease-in, opacity 0.4s ease-in;
+        }
+
+        .toast-success {
+            background: #f0fdf4;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .toast-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast-info {
+            background: #eff6ff;
+            color: #1e40af;
+            border-left: 4px solid #1A56DB;
+        }
+
+        .toast-aktif {
+            background: #eff6ff;
+            color: #1e40af;
+            border-left: 4px solid #1A56DB;
+        }
+
+        .toast-selesai {
+            background: #f0fdf4;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .toast-plg {
+            background: #fef2f2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        /* Progress bar di bawah toast */
+        .toast-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            border-radius: 0 0 0 12px;
+            background: currentColor;
+            opacity: 0.35;
+            width: 100%;
+            transform-origin: left;
+        }
+
+        @keyframes toastBarShrink {
+            from {
+                transform: scaleX(1);
+            }
+
+            to {
+                transform: scaleX(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .5
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Toast notifikasi real-time -->
+    <div id="toast-container"></div>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <img src="https://raw.githubusercontent.com/fayyadma7/ujian-mutiga/main/assets/logo-mute.png"
+                alt="Logo SMK">
+            <div class="brand-text">
+                <span class="title">Admin CBT</span>
+                <span class="subtitle">SMK Muhammadiyah 3<br>Purbalingga</span>
+            </div>
+        </div>
+        <ul class="nav-links">
+            <li><a class="nav-btn active" onclick="bukaHalaman('dashboard', this)"><i class="fas fa-home"></i>
+                    <span>Dashboard</span></a></li>
+            <li><a class="nav-btn" onclick="bukaHalaman('bank-soal', this)"><i class="fas fa-file-alt"></i>
+                    <span>Bank Soal</span></a></li>
+            <li><a class="nav-btn" onclick="bukaHalaman('jadwal', this)"><i class="fas fa-calendar-alt"></i>
+                    <span>Penjadwalan</span></a></li>
+            <li><a class="nav-btn" onclick="bukaHalaman('monitoring', this)"><i class="fas fa-satellite-dish"></i>
+                    <span>Live Monitoring</span></a></li>
+            <li><a class="nav-btn" onclick="bukaHalaman('laporan', this)"><i class="fas fa-chart-bar"></i>
+                    <span>Laporan Nilai</span></a></li>
+            <li><a class="nav-btn" onclick="bukaHalaman('analisis-soal-page', this)"><i class="fas fa-chart-pie"></i>
+                    <span>Analisis Soal</span></a></li>
+        </ul>
+    </nav>
+
+    <!-- KONTEN UTAMA -->
+    <main class="main-wrapper">
+        <header>
+            <div style="display:flex; align-items:center; gap:20px;">
+                <button id="sidebar-toggle"
+                    style="background:none; border:none; color:var(--navy-dark); font-size:1.2rem; cursor:pointer; padding:5px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <!-- toast-container di body, bukan header -->
+                <div class="header-title" id="judul-halaman">Dashboard Overview</div>
+            </div>
+            <div
+                style="display:flex; align-items:center; gap:12px; color:var(--text-muted); font-size:0.9rem; font-weight: 500;">
+                <span id="tanggal-sekarang" style="color:var(--text-main);"></span>
+                <div
+                    style="display:flex; align-items:center; gap:6px; background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:20px; font-weight:600;">
+                    <i class="fas fa-clock" style="font-size:12px;"></i>
+                    <span id="jam-sekarang"></span>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-area">
+
+            <!-- HALAMAN: DASHBOARD -->
+            <section id="dashboard" class="page-section active">
+                <div class="grid-cards">
+                    <div class="stat-card">
+                        <div class="icon-box icon-blue"><i class="fas fa-users"></i></div>
+                        <div class="stat-info">
+                            <h4>Total Siswa Ujian</h4>
+                            <h2 id="tot-siswa">-</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-box icon-gold"><i class="fas fa-book"></i></div>
+                        <div class="stat-info">
+                            <h4>Total Bank Soal</h4>
+                            <h2 id="tot-soal">-</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-box icon-green"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <h4>Rata-rata Nilai</h4>
+                            <h2 id="rata-nilai">-</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-box" style="background:#fef2f2; color:#ef4444;"><i
+                                class="fas fa-broadcast-tower"></i></div>
+                        <div class="stat-info">
+                            <h4>Ujian Sedang Aktif</h4>
+                            <h2 id="tot-aktif" style="color:#ef4444;">0</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                    <div class="card-panel" style="margin-top:0;">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><i class="fas fa-broadcast-tower"
+                                    style="color:var(--danger); margin-right:8px;"></i> Jadwal Ujian Aktif Saat Ini</h3>
+                        </div>
+                        <div id="dashboard-jadwal-aktif">
+                            <div style="text-align:center; padding:20px; color:var(--text-muted);">Memuat jadwal
+                                aktif...</div>
+                        </div>
+                    </div>
+
+                    <div class="card-panel" style="margin-top:0;">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><i class="fas fa-history"
+                                    style="color:var(--primary); margin-right:8px;"></i> Aktivitas Terbaru</h3>
+                        </div>
+                        <p style="color: var(--text-muted); font-size:13px; line-height:1.6; margin-bottom:15px;">Siswa
+                            yang baru saja selesai mengerjakan ujian akan muncul otomatis di sini.</p>
+                        <div id="dashboard-recent-activity">
+                            <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">Belum
+                                ada aktivitas.</div>
+                        </div>
+                        <div
+                            style="margin-top:15px; padding:12px; background:#f8fafc; border-radius:8px; border-left:4px solid var(--primary);">
+                            <span style="font-size:12px; color:var(--navy-mid); font-weight:600;">Tips Admin:</span><br>
+                            <span style="font-size:12px; color:var(--text-muted);">Pastikan untuk menonaktifkan jadwal
+                                ujian jika waktu pengerjaan sudah benar-benar berakhir.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- HALAMAN: BANK SOAL -->
+            <section id="bank-soal" class="page-section">
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Import Soal dari File</h3>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-outline" onclick="downloadTemplate()"><i
+                                    class="fas fa-file-excel"></i> Template Excel</button>
+                            <button class="btn btn-outline"
+                                style="color:#2563eb; border-color:#bfdbfe; background:#eff6ff;"
+                                onclick="downloadTemplateWord()"><i class="fas fa-file-word"></i> Template Word</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="color: var(--sidebar-bg); font-weight: 700;">1. Ketik Nama Mata Pelajaran</label>
+                        <input type="text" id="mapel-upload" class="form-control"
+                            placeholder="Contoh: Matematika, Bahasa Indonesia...">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <!-- Upload Excel -->
+                        <div class="upload-area">
+                            <i class="fas fa-file-excel" style="color:#10b981;"></i>
+                            <h3 style="color: var(--sidebar-bg); font-size:16px;">2A. Upload File Excel (.xlsx)</h3>
+                            <p style="color: var(--text-muted); margin-top: 8px; font-size:13px;">Soal murni teks</p>
+                            <input type="file" id="inputExcel" accept=".xlsx, .xls">
+                        </div>
+
+                        <!-- Upload Word -->
+                        <div class="upload-area" style="border-color:#bfdbfe; background:#f8fafc;">
+                            <i class="fas fa-file-word" style="color:#2563eb;"></i>
+                            <h3 style="color: var(--sidebar-bg); font-size:16px;">2B. Upload File Word (.docx)</h3>
+                            <p style="color: var(--text-muted); margin-top: 8px; font-size:13px;">Mendukung Gambar,
+                                Rumus, dan Essay</p>
+                            <input type="file" id="inputWord" accept=".docx">
+                        </div>
+                    </div>
+                    <div id="status-upload" style="margin-top: 15px; font-weight: 500; text-align: center;"></div>
+                </div>
+
+                <!-- PANEL PREVIEW SOAL -->
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Preview Isi Bank Soal</h3>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-outline"
+                                style="color:var(--danger); border-color:#fecaca; padding:6px 10px;"
+                                onclick="bulkActionSoal('delete')" title="Hapus soal yang diceklis"><i
+                                    class="fas fa-trash-alt"></i></button>
+                            <div style="display:flex; flex-direction:column; gap:8px;">
+                                <select id="preview-mapel" class="form-control"
+                                    style="width:200px; padding:6px 10px; font-size:13px;" onchange="loadPreviewSoal()">
+                                    <option value="">— Pilih Mapel —</option>
+                                </select>
+                                <input type="text" id="search-soal" class="form-control" placeholder="Cari teks soal..."
+                                    style="padding:6px 10px; font-size:12px;" onkeyup="filterPreviewSoal()">
+                            </div>
+                            <button class="btn btn-outline" onclick="loadPreviewSoal()"><i class="fas fa-sync-alt"></i>
+                                Refresh</button>
+                        </div>
+                    </div>
+                    <div id="preview-container"
+                        style="max-height: 500px; overflow-y: auto; padding: 15px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px;">
+                        <div style="text-align:center; padding:30px; color:var(--text-muted);">
+                            Pilih Mata Pelajaran di atas untuk melihat preview soal.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- HALAMAN: PENJADWALAN -->
+            <section id="jadwal" class="page-section">
+                <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+
+                    <!-- FORM TAMBAH JADWAL -->
+                    <div class="card-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Buat Jadwal Baru</h3>
+                        </div>
+                        <div class="form-group">
+                            <label>Nama Mata Pelajaran</label>
+                            <select id="jadwal-mapel" class="form-control">
+                                <option value="">— Pilih Mapel dari Bank Soal —</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Jurusan / Kategori Kelas (Opsional)</label>
+                            <input type="text" id="jadwal-jurusan" class="form-control"
+                                placeholder="Contoh: Akuntansi & Keuangan Lembaga">
+                        </div>
+                        <div class="form-group">
+                            <label>Untuk Kelas</label>
+                            <input type="text" id="jadwal-kelas" class="form-control"
+                                placeholder="Contoh: X AKL A, X AKL B (Kosongkan jika untuk semua kelas)">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar-check"></i> Window Waktu Ujian <span
+                                    style="font-size:11px; color:var(--text-muted); font-weight:400;">(kapan siswa boleh
+                                    login & mulai)</span></label>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                <div>
+                                    <small
+                                        style="color:var(--text-muted); font-size:10px; display:block; margin-bottom:4px;">📅
+                                        Mulai Masuk</small>
+                                    <input type="datetime-local" id="jadwal-waktu" class="form-control"
+                                        style="padding: 8px 5px; font-size:12px;">
+                                </div>
+                                <div>
+                                    <small
+                                        style="color:var(--text-muted); font-size:10px; display:block; margin-bottom:4px;">🔒
+                                        Batas Masuk</small>
+                                    <input type="datetime-local" id="jadwal-selesai" class="form-control"
+                                        style="padding: 8px 5px; font-size:12px;">
+                                </div>
+                            </div>
+                            <div
+                                style="margin-top:6px; font-size:11px; color:#64748b; background:#f8fafc; padding:6px 10px; border-radius:6px; border-left:3px solid var(--primary);">
+                                <i class="fas fa-info-circle"></i> Siswa hanya bisa mulai ujian di dalam rentang waktu
+                                ini.
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-stopwatch"></i> Durasi Ujian per Siswa</label>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="number" id="jadwal-durasi" class="form-control" min="1" max="300"
+                                    placeholder="Contoh: 90" style="width:120px; font-size:14px; font-weight:600;">
+                                <span style="font-size:14px; color:var(--text-muted); font-weight:600;">menit</span>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <button type="button" onclick="document.getElementById('jadwal-durasi').value=45"
+                                        style="padding:4px 8px; font-size:11px; border:1px solid var(--border); border-radius:6px; background:white; cursor:pointer;">45'</button>
+                                    <button type="button" onclick="document.getElementById('jadwal-durasi').value=60"
+                                        style="padding:4px 8px; font-size:11px; border:1px solid var(--border); border-radius:6px; background:white; cursor:pointer;">60'</button>
+                                    <button type="button" onclick="document.getElementById('jadwal-durasi').value=90"
+                                        style="padding:4px 8px; font-size:11px; border:1px solid var(--border); border-radius:6px; background:white; cursor:pointer;">90'</button>
+                                    <button type="button" onclick="document.getElementById('jadwal-durasi').value=120"
+                                        style="padding:4px 8px; font-size:11px; border:1px solid var(--border); border-radius:6px; background:white; cursor:pointer;">120'</button>
+                                </div>
+                            </div>
+                            <div
+                                style="margin-top:6px; font-size:11px; color:#64748b; background:#f0fdf4; padding:6px 10px; border-radius:6px; border-left:3px solid #10b981;">
+                                <i class="fas fa-user-clock"></i> Timer siswa dimulai saat mereka klik <b>"Mulai
+                                    Ujian"</b> dan akan berjalan selama durasi ini.
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%; justify-content: center;"
+                            onclick="simpanJadwal()">
+                            <i class="fas fa-plus"></i> Simpan Jadwal
+                        </button>
+                        <div id="status-jadwal" style="margin-top: 12px; font-weight: 500; text-align: center;"></div>
+                    </div>
+
+                    <!-- TABEL DAFTAR JADWAL -->
+                    <div class="card-panel" style="overflow-x: auto;">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Daftar Jadwal Ujian</h3>
+                            <button class="btn btn-outline" onclick="loadJadwal()"><i class="fas fa-sync-alt"></i>
+                                Refresh</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;"><input type="checkbox" id="select-all-jadwal"
+                                            onchange="toggleSelectAll('jadwal')"></th>
+                                    <th>MATA PELAJARAN</th>
+                                    <th>TARGET KELAS</th>
+                                    <th>WAKTU PELAKSANAAN</th>
+                                    <th>DURASI/SISWA</th>
+                                    <th>STATUS</th>
+                                    <th>AKTIFKAN</th>
+                                    <th>OPSI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabel-jadwal">
+                                <tr>
+                                    <td colspan="5" style="text-align:center; padding: 20px;">Memuat jadwal...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HALAMAN: LIVE MONITORING -->
+            <section id="monitoring" class="page-section">
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title">🔴 Live Monitoring Ujian</h3>
+                            <p style="color:var(--text-muted); font-size:0.8rem; margin-top:4px;">
+                                <i class="fas fa-bolt" style="color:#f59e0b;"></i> <strong>Real-time</strong> via
+                                Supabase
+                            </p>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <select id="filter-mapel-monitoring" class="form-control"
+                                style="width:180px; padding:8px 12px; font-size:13px;" onchange="loadMonitoring()">
+                                <option value="">Semua Mapel</option>
+                            </select>
+                            <select id="filter-kelas-monitoring" class="form-control"
+                                style="width:180px; padding:8px 12px; font-size:13px;" onchange="loadMonitoring()">
+                                <option value="">Semua Kelas</option>
+                            </select>
+                            <button class="btn btn-outline" onclick="loadMonitoring()"><i class="fas fa-sync-alt"></i>
+                                Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- Banner status monitoring -->
+                    <div id="mon-status-banner"
+                        style="display:none; background:#d1fae5; border:1px solid #6ee7b7; border-radius:10px; padding:12px 16px; margin-bottom:16px; color:#065f46; font-weight:600; font-size:14px; align-items:center; gap:8px;">
+                        <i class="fas fa-check-circle"></i> Semua siswa sudah selesai — Live monitoring dihentikan
+                        otomatis.
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;">
+                        <div
+                            style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px; text-align:center;">
+                            <div style="font-size:2rem; font-weight:700; color:#16a34a;" id="mon-aktif">-</div>
+                            <div style="font-size:0.8rem; color:#16a34a; font-weight:600; margin-top:4px;">🟢 Sedang
+                                Mengerjakan</div>
+                        </div>
+                        <div
+                            style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:16px; text-align:center;">
+                            <div style="font-size:2rem; font-weight:700; color:var(--primary);" id="mon-selesai">-</div>
+                            <div style="font-size:0.8rem; color:var(--primary); font-weight:600; margin-top:4px;">✅
+                                Sudah Selesai</div>
+                        </div>
+                        <div
+                            style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:16px; text-align:center;">
+                            <div style="font-size:2rem; font-weight:700; color:#ea580c;" id="mon-pelanggaran">-</div>
+                            <div style="font-size:0.8rem; color:#ea580c; font-weight:600; margin-top:4px;">⚠️ Ada
+                                Pelanggaran</div>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align:center;">No</th>
+                                <th>Nama Siswa</th>
+                                <th style="text-align:center;">Kelas / Mapel</th>
+                                <th style="text-align:center;">Status</th>
+                                <th style="text-align:center;">Pelanggaran</th>
+                                <th style="text-align:center;">Waktu Mulai</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel-monitoring">
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding:20px;">Memuat data monitoring...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- HALAMAN: LAPORAN NILAI -->
+            <section id="laporan" class="page-section">
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-outline" style="color:var(--danger); border-color:#fecaca;"
+                                onclick="bulkActionLaporan('delete')"><i class="fas fa-trash"></i> Hapus
+                                Terpilih</button>
+                            <select id="filter-mapel-laporan" class="form-control"
+                                style="width:160px; padding:6px 10px; font-size:13px;" onchange="loadNilaiSiswa()">
+                                <option value="">Semua Mapel</option>
+                            </select>
+                            <select id="filter-kelas-laporan" class="form-control"
+                                style="width:160px; padding:6px 10px; font-size:13px;" onchange="loadNilaiSiswa()">
+                                <option value="">Semua Kelas</option>
+                            </select>
+                            <button class="btn btn-outline" onclick="loadNilaiSiswa()"><i class="fas fa-sync-alt"></i>
+                                Refresh Data</button>
+                            <button class="btn btn-primary" onclick="exportExcel()"><i class="fas fa-file-export"></i>
+                                Export Nilai
+                                (Excel)</button>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:40px; text-align:center;"><input type="checkbox"
+                                        id="select-all-laporan" onchange="toggleSelectAll('laporan')"></th>
+                                <th style="text-align:center;">No</th>
+                                <th>Nama Siswa</th>
+                                <th style="text-align:center;">Kls/Mapel</th>
+                                <th style="text-align:center;">Skor PG</th>
+                                <th style="text-align:center;">Durasi/Pelanggaran</th>
+                                <th style="text-align:center;">Status</th>
+                                <th style="text-align:center;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel-data-nilai">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 20px;">Memuat data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- HALAMAN: ANALISIS SOAL PAGE -->
+            <section id="analisis-soal-page" class="page-section">
+                <div class="card-panel">
+                    <div class="panel-header" style="flex-wrap: wrap; gap: 15px;">
+                        <h3 class="panel-title"><i class="fas fa-chart-pie"></i> Analisis Detail Ujian</h3>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <select id="ana-filter-mapel" class="form-control" style="width:160px;"
+                                onchange="loadAnalisisData()"></select>
+                            <select id="ana-filter-kelas" class="form-control" style="width:140px;"
+                                onchange="loadAnalisisData()"></select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 25px;">
+                        <!-- Grafik (Kiri) -->
+                        <div
+                            style="flex: 2; min-width: 300px; background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                            <h4 style="margin-bottom:15px; color:var(--navy-dark); font-size:14px;"><i
+                                    class="fas fa-chart-bar"></i> Distribusi Nilai</h4>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="chartAnalisis"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Ringkasan (Kanan) -->
+                        <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 12px;">
+                            <div class="stat-card"
+                                style="padding:15px; background:#eff6ff; border-left:5px solid var(--primary); margin:0;">
+                                <div class="stat-info">
+                                    <h4 style="font-size:12px;">Rata-rata</h4>
+                                    <h2 id="ana-rata" style="font-size:24px;">-</h2>
+                                </div>
+                            </div>
+                            <div class="stat-card"
+                                style="padding:15px; background:#f0fdf4; border-left:5px solid #10b981; margin:0;">
+                                <div class="stat-info">
+                                    <h4 style="font-size:12px;">Tertinggi</h4>
+                                    <h2 id="ana-tinggi" style="font-size:24px;">-</h2>
+                                </div>
+                            </div>
+                            <div class="stat-card"
+                                style="padding:15px; background:#fef2f2; border-left:5px solid #ef4444; margin:0;">
+                                <div class="stat-info">
+                                    <h4 style="font-size:12px;">Terendah</h4>
+                                    <h2 id="ana-rendah" style="font-size:24px;">-</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Butir Soal -->
+                    <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+                        <div
+                            style="padding:15px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                            <h4 style="color:var(--navy-dark); font-size:14px;"><i class="fas fa-list-ol"></i> Analisis
+                                Per Butir Soal</h4>
+                            <span id="ana-total-soal" style="font-size:12px; color:var(--text-muted);">Total: 0
+                                Soal</span>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <thead style="background:#f1f5f9;">
+                                    <tr>
+                                        <th style="padding:12px; font-size:12px; text-align:center; width:50px;">No</th>
+                                        <th style="padding:12px; font-size:12px; text-align:left;">Teks Soal</th>
+                                        <th style="padding:12px; font-size:12px; text-align:center; width:100px;">Tipe
+                                        </th>
+                                        <th style="padding:12px; font-size:12px; text-align:center; width:120px;">Tkt.
+                                            Kesukaran</th>
+                                        <th style="padding:12px; font-size:12px; text-align:center; width:100px;">Status
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabel-analisis-soal">
+                                    <tr>
+                                        <td colspan="5"
+                                            style="padding:30px; text-align:center; color:var(--text-muted);">Pilih
+                                            Mapel untuk melihat analisis butir soal.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- ==================== LOGIC JAVASCRIPT ==================== -->
+    <script>
+        // --- 1. KONFIGURASI SUPABASE ---
+        const supabaseUrl = 'https://bkecjfrwqocguyvjymkn.supabase.co';
+        const supabaseKey = 'sb_publishable_4sQqxzUTiVhuf2h4SZCqNA_txpH0J8C';
+        const db = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let globalDataJawaban = []; // Untuk menyimpan data yang sedang difilter
+        let lastActivityId = null;
+
+        let jadwalTimeout = null;
+
+        function bukaHalaman(idHalaman, elemenTombol) {
+            document.querySelectorAll('.page-section').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(idHalaman).classList.add('active');
+            elemenTombol.classList.add('active');
+
+            const judul = {
+                'dashboard': 'Dashboard Overview',
+                'bank-soal': 'Manajemen Bank Soal',
+                'jadwal': 'Pengaturan Jadwal Ujian',
+                'monitoring': '🔴 Live Monitoring Ujian',
+                'laporan': 'Laporan Hasil Ujian Siswa',
+                'analisis-soal-page': 'Analisis Statistik & Butir Soal'
+            };
+            document.getElementById('judul-halaman').innerText = judul[idHalaman] || '';
+
+            // Reset banner monitoring saat pindah halaman
+            const banner = document.getElementById('mon-status-banner');
+            if (banner) banner.style.display = 'none';
+
+            // Bersihkan auto-refresh jadwal presisi jika pindah halaman
+            if (jadwalTimeout) {
+                clearTimeout(jadwalTimeout);
+                jadwalTimeout = null;
+            }
+
+            if (idHalaman === 'dashboard') {
+                updateDashboardStats();
+                loadDashboardJadwalAktif();
+                loadRecentActivity();
+            }
+            if (idHalaman === 'laporan') loadNilaiSiswa();
+            if (idHalaman === 'jadwal') {
+                populateJadwalMapelDropdown();
+                loadJadwal();
+            }
+            if (idHalaman === 'bank-soal') populatePreviewMapel();
+            if (idHalaman === 'analisis-soal-page') populateAnalisisFilters();
+            if (idHalaman === 'monitoring') {
+                // Isi dropdown filter lalu muat tabel — subscription sudah berjalan global
+                populateFilterKelas().then(() => loadMonitoring());
+            }
+        }
+
+        // --- 3. LOGIC AMBIL DATA DARI DATABASE (READ) ---
+        async function loadNilaiSiswa() {
+            const tbody = document.getElementById('tabel-data-nilai');
+            const selectMapel = document.getElementById('filter-mapel-laporan');
+            const selectKelas = document.getElementById('filter-kelas-laporan');
+
+            const filterMapel = selectMapel ? selectMapel.value : '';
+            const filterKelas = selectKelas ? selectKelas.value : '';
+
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Sedang mengambil data...</td></tr>';
+
+            // Ambil semua data untuk mengekstrak dropdown filter yang tersedia
+            const { data: allData, error } = await db.from('jawaban_ujian').select('*').order('created_at', { ascending: false });
+
+            if (error) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Gagal mengambil data database!</td></tr>';
+                return;
+            }
+
+            // Update dropdown filters options
+            if (selectMapel && selectKelas) {
+                const mapelSet = new Set();
+                const kelasSet = new Set();
+                allData.forEach(d => {
+                    if (d.kelas) {
+                        let kString = d.kelas;
+                        if (kString.includes('::')) kString = kString.split('::')[1];
+                        kString.split(',').forEach(k => {
+                            if (k.trim()) kelasSet.add(k.trim().toUpperCase());
+                        });
+                    }
+                    if (d.mapel) mapelSet.add(d.mapel.trim());
+                });
+
+                selectMapel.innerHTML = '<option value="">Semua Mapel</option>';
+                [...mapelSet].sort().forEach(m => {
+                    const opt = document.createElement('option'); opt.value = m; opt.textContent = m;
+                    selectMapel.appendChild(opt);
+                });
+                selectMapel.value = filterMapel;
+
+                selectKelas.innerHTML = '<option value="">Semua Kelas</option>';
+                [...kelasSet].sort().forEach(k => {
+                    const opt = document.createElement('option'); opt.value = k; opt.textContent = k;
+                    selectKelas.appendChild(opt);
+                });
+                selectKelas.value = filterKelas;
+            }
+
+            // Filter data berdasarkan dropdown
+            const data = allData.filter(s => {
+                const matchMapel = !filterMapel || (s.mapel && s.mapel.trim() === filterMapel);
+                const matchKelas = !filterKelas || (s.kelas && s.kelas.trim() === filterKelas);
+                return matchMapel && matchKelas;
+            });
+            globalDataJawaban = data; // Simpan ke global agar bisa dianalisis
+
+            tbody.innerHTML = '';
+            let totalNilai = 0;
+
+            data.forEach((siswa, index) => {
+                totalNilai += parseInt(siswa.skor_pg) || 0;
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="text-align:center;"><input type="checkbox" class="cb-laporan" value="${siswa.id}"></td>
+                        <td style="text-align:center;">${index + 1}</td>
+                        <td style="font-weight: 500;">${siswa.nama}</td>
+                        <td style="text-align:center;">
+                            <span class="badge" style="display:inline-block; margin-bottom:4px;">${siswa.kelas}</span><br>
+                            <span style="font-size:12px; color:var(--text-muted); font-weight:600;">${siswa.mapel}</span>
+                        </td>
+                        <td style="text-align:center; font-weight: 700; color: var(--primary); font-size:16px;">${siswa.skor_pg !== null ? siswa.skor_pg : '-'}</td>
+                        <td style="text-align:center;">
+                            <span style="font-size:13px; color:var(--text-main);"><i class="fas fa-clock" style="color:var(--text-muted)"></i> ${siswa.durasi || '-'}</span><br>
+                            <span style="font-size:12px; font-weight:600; color:${siswa.pelanggaran > 0 ? '#ef4444' : '#10b981'};"><i class="fas fa-exclamation-triangle"></i> ${siswa.pelanggaran || 0} Pelanggaran</span>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="badge" style="background:${String(siswa.status).includes('PELANGGARAN') ? '#fee2e2' : '#d1fae5'}; color:${String(siswa.status).includes('PELANGGARAN') ? '#ef4444' : '#065f46'}; border:none;">
+                                ${siswa.status || 'SELESAI'}
+                            </span>
+                        </td>
+                        <td style="text-align:center;">
+                            <button class="btn btn-danger" style="padding: 6px 10px; font-size: 12px;" onclick="hapusDataNilai(${siswa.id}, '${siswa.nama}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (data.length > 0) {
+                // Hapus jika elemen tot-siswa/rata-nilai tidak ada (optional)
+                const elTot = document.getElementById('tot-siswa');
+                const elRata = document.getElementById('rata-nilai');
+                if (elTot) elTot.innerText = data.length + " Orang";
+                if (elRata) elRata.innerText = (totalNilai / data.length).toFixed(1);
+            }
+        }
+
+        // --- 3. DASHBOARD LOGIC ---
+
+        async function updateDashboardStats() {
+            const { data: siswa } = await db.from('jawaban_ujian').select('id');
+            if (siswa) document.getElementById('tot-siswa').innerText = siswa.length + " Orang";
+
+            const { count: jmlSoal } = await db.from('bank_soal').select('*', { count: 'exact', head: true });
+            document.getElementById('tot-soal').innerText = jmlSoal || 0;
+
+            const { data: nilai } = await db.from('jawaban_ujian').select('skor_pg');
+            if (nilai && nilai.length > 0) {
+                const total = nilai.reduce((acc, curr) => acc + Number(curr.skor_pg || 0), 0);
+                const rata = (total / nilai.length).toFixed(1);
+                document.getElementById('rata-nilai').innerText = rata;
+            }
+
+            // Hitung jadwal yang benar-benar sedang berjalan saat ini
+            const now = new Date().toISOString();
+            const { count: activeCount } = await db.from('jadwal_ujian')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_aktif', true)
+                .lte('waktu_mulai', now)
+                .gte('waktu_selesai', now);
+
+            const elActive = document.getElementById('tot-aktif');
+            if (elActive) elActive.innerText = activeCount || 0;
+        }
+
+        async function loadDashboardJadwalAktif() {
+            const container = document.getElementById('dashboard-jadwal-aktif');
+            const now = new Date();
+            const { data, error } = await db.from('jadwal_ujian').select('*').eq('is_aktif', true);
+
+            const activeNow = data ? data.filter(j => {
+                return now >= new Date(j.waktu_mulai) && now <= new Date(j.waktu_selesai);
+            }) : [];
+
+            if (error || activeNow.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted); background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">
+                    <i class="fas fa-coffee" style="font-size:24px; margin-bottom:10px; display:block; opacity:0.5;"></i>
+                    Tidak ada ujian yang sedang aktif saat ini.
+                </div>`;
+                return;
+            }
+
+            let html = '';
+            activeNow.forEach(j => {
+                let kelasStr = j.kelas || "Semua Kelas";
+                if (kelasStr.includes('::')) {
+                    const p = kelasStr.split('::');
+                    kelasStr = `<span style="color:var(--primary); font-weight:700;">${p[0]}</span> - ${p[1]}`;
+                }
+                const tMulai = new Date(j.waktu_mulai);
+                const tSelesai = new Date(j.waktu_selesai);
+
+                html += `
+                    <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:12px; transition:all 0.3s; border-left:4px solid #10b981; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                            <strong style="color:var(--navy-dark); font-size:15px;">${j.mapel}</strong>
+                            <span class="badge" style="background:#dcfce7; color:#166534; border:none; font-size:10px;">LIVE</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+                            <i class="fas fa-users" style="width:16px;"></i> ${kelasStr}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:15px; font-size:11px; color:var(--navy-mid); font-weight:600; padding-top:8px; border-top:1px solid #f1f5f9;">
+                            <span><i class="fas fa-clock"></i> Selesai: ${tSelesai.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span style="color:#ef4444;"><i class="fas fa-circle fa-beat"></i> Sedang Berjalan</span>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        async function hapusSatuSoal(id) {
+            if (!confirm("Yakin ingin menghapus satu soal ini secara permanen?")) return;
+            const { error } = await db.from('bank_soal').delete().eq('id', id);
+            if (error) showToast("Gagal menghapus: " + error.message, 'error');
+            else {
+                showToast("Soal berhasil dihapus", 'success');
+                loadPreviewSoal();
+            }
+        }
+
+        function filterPreviewSoal() {
+            const query = document.getElementById('search-soal').value.trim().toLowerCase();
+            const items = document.querySelectorAll('.soal-item');
+
+            items.forEach(item => {
+                const teksDiv = item.querySelector('.teks-pertanyaan');
+                if (!item.dataset.original) item.dataset.original = teksDiv.innerHTML;
+
+                const originalHtml = item.dataset.original;
+                const textOnly = item.innerText.toLowerCase();
+
+                if (query === "") {
+                    teksDiv.innerHTML = originalHtml;
+                    item.style.display = 'block';
+                } else if (textOnly.includes(query)) {
+                    item.style.display = 'block';
+                    // Highlight logic: Replace text outside tags
+                    const regex = new RegExp(`(${query})`, 'gi');
+                    // Kita gunakan innerText untuk pencocokan yang bersih, tapi innerHTML untuk display
+                    // Untuk highlight pro, kita ganti teksnya saja
+                    teksDiv.innerHTML = originalHtml.replace(regex, '<mark style="background:#fef08a; color:#854d0e; padding:0 2px; border-radius:2px;">$1</mark>');
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        async function hapusDataNilai(id, nama) {
+            if (!confirm(`Hapus data nilai siswa "${nama}"? Siswa ini nantinya bisa login ulang untuk ujian kembali.`)) return;
+            const { error } = await db.from('jawaban_ujian').delete().eq('id', id);
+            if (error) showToast("Gagal menghapus: " + error.message, 'error');
+            else {
+                showToast(`Data nilai "${nama}" berhasil dihapus`, 'success');
+                loadNilaiSiswa();
+            }
+        }
+
+        // --- BATCH ACTIONS ---
+        function toggleSelectAll(type) {
+            const isChecked = document.getElementById('select-all-' + type).checked;
+            const selector = type === 'jadwal' ? '.cb-jadwal' : (type === 'laporan' ? '.cb-laporan' : '.cb-soal');
+            document.querySelectorAll(selector).forEach(cb => cb.checked = isChecked);
+        }
+
+        async function bulkActionJadwal(action) {
+            const ids = Array.from(document.querySelectorAll('.cb-jadwal:checked')).map(cb => cb.value);
+            if (ids.length === 0) return showToast("Pilih minimal satu jadwal!", 'info');
+
+            if (action === 'delete') {
+                if (!confirm(`Hapus ${ids.length} jadwal terpilih?`)) return;
+                await db.from('jadwal_ujian').delete().in('id', ids);
+                showToast(`${ids.length} jadwal berhasil dihapus`, 'success');
+            } else {
+                const status = (action === 'active');
+                await db.from('jadwal_ujian').update({ is_aktif: status }).in('id', ids);
+                showToast(`${ids.length} jadwal ${status ? 'diaktifkan' : 'dinonaktifkan'}`, 'success');
+            }
+            loadJadwal();
+        }
+
+        async function bulkActionSoal(action) {
+            const ids = Array.from(document.querySelectorAll('.cb-soal:checked')).map(cb => cb.value);
+            if (ids.length === 0) return showToast("Pilih minimal satu soal!", 'info');
+            if (!confirm(`Hapus ${ids.length} soal terpilih?`)) return;
+            await db.from('bank_soal').delete().in('id', ids);
+            showToast(`${ids.length} soal berhasil dihapus`, 'success');
+            loadPreviewSoal();
+        }
+
+        async function bulkActionLaporan(action) {
+            const ids = Array.from(document.querySelectorAll('.cb-laporan:checked')).map(cb => cb.value);
+            if (ids.length === 0) return showToast("Pilih minimal satu data!", 'info');
+            if (!confirm(`Hapus ${ids.length} data nilai terpilih?`)) return;
+            await db.from('jawaban_ujian').delete().in('id', ids);
+            showToast(`${ids.length} data nilai berhasil dihapus`, 'success');
+            loadNilaiSiswa();
+        }
+
+        async function loadRecentActivity() {
+            const container = document.getElementById('dashboard-recent-activity');
+            const { data, error } = await db.from('jawaban_ujian').select('*').order('created_at', { ascending: false }).limit(5);
+
+            if (error || !data || data.length === 0) return;
+
+            let html = '';
+            let adaDataBaru = false;
+
+            data.forEach((s, idx) => {
+                const waktu = new Date(s.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const isPlg = parseInt(s.pelanggaran) > 0;
+
+                // Audio alert jika ada ID baru yang belum ada di tampilan sebelumnya
+                if (idx === 0 && window.lastActivityId !== s.id) {
+                    window.lastActivityId = s.id;
+                    if (idx === 0) adaDataBaru = true;
+                }
+
+                html += `
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #f1f5f9; animation: fadeIn 0.5s ease;">
+                        <div style="width:36px; height:36px; background:#eff6ff; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--primary); font-size:14px; flex-shrink:0;">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-size:13px; font-weight:600; color:var(--navy-dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.nama}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">${s.mapel} • ${s.kelas}</div>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
+                            <div style="font-size:11px; color:var(--primary); font-weight:700;">${waktu}</div>
+                            <div style="font-size:10px; color:${isPlg ? '#ef4444' : '#10b981'}; font-weight:600;">
+                                ✓ Selesai ${isPlg ? '<br><span style="font-size:9px;">🚨 ' + s.pelanggaran + ' Pelanggaran</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            if (adaDataBaru && window.lastActivityId) {
+                playNotificationSound();
+            }
+        }
+
+        function playNotificationSound() {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+            audio.play().catch(e => console.log("Audio play blocked by browser"));
+        }
+
+        // --- ANALISIS SOAL ---
+        let myChart = null;
+
+        async function loadAnalisisData() {
+            const mapel = document.getElementById('ana-filter-mapel').value;
+            const kelas = document.getElementById('ana-filter-kelas').value;
+
+            if (!mapel) return;
+
+            // 1. Ambil Statistik Nilai
+            let queryNilai = db.from('jawaban_ujian').select('*').eq('mapel', mapel);
+            if (kelas) queryNilai = queryNilai.eq('kelas', kelas);
+            const { data: dataNilai } = await queryNilai;
+
+            if (dataNilai && dataNilai.length > 0) {
+                const skor = dataNilai.map(s => Number(s.skor_pg || 0));
+                document.getElementById('ana-rata').innerText = (skor.reduce((a, b) => a + b, 0) / skor.length).toFixed(1);
+                document.getElementById('ana-tinggi').innerText = Math.max(...skor);
+                document.getElementById('ana-rendah').innerText = Math.min(...skor);
+                renderChart(skor);
+            } else {
+                document.getElementById('ana-rata').innerText = "-";
+                document.getElementById('ana-tinggi').innerText = "-";
+                document.getElementById('ana-rendah').innerText = "-";
+                if (myChart) myChart.destroy();
+            }
+
+            // 2. Ambil & Render Butir Soal
+            const { data: dataSoal } = await db.from('bank_soal').select('*').eq('mapel', mapel).order('id', { ascending: true });
+            const tbody = document.getElementById('tabel-analisis-soal');
+            document.getElementById('ana-total-soal').innerText = `Total: ${dataSoal ? dataSoal.length : 0} Soal`;
+
+            if (dataSoal && dataSoal.length > 0) {
+                tbody.innerHTML = '';
+                dataSoal.forEach((s, i) => {
+                    // Kalkulasi dummy (nanti diisi real data rincian_jawaban)
+                    const randomPct = Math.floor(Math.random() * 40) + 60; // Mock data
+                    let badgeColor = '#10b981', status = 'Mudah';
+                    if (randomPct < 70) { badgeColor = '#f59e0b'; status = 'Sedang'; }
+                    if (randomPct < 40) { badgeColor = '#ef4444'; status = 'Sukar'; }
+
+                    tbody.innerHTML += `
+                        <tr style="border-bottom:1px solid #f1f5f9;">
+                            <td style="padding:12px; text-align:center; font-weight:600;">${i + 1}</td>
+                            <td style="padding:12px; font-size:13px; color:var(--text-main);">
+                                <div style="line-height:1.5;">
+                                    ${s.pertanyaan}
+                                </div>
+                            </td>
+                            <td style="padding:12px; text-align:center;"><span class="badge" style="background:#e0e7ff; color:#3730a3; border:none;">${s.tipe_soal || 'PG'}</span></td>
+                            <td style="padding:12px; text-align:center;">
+                                <div style="width:100%; background:#f1f5f9; height:8px; border-radius:4px; overflow:hidden; margin-bottom:4px;">
+                                    <div style="width:${randomPct}%; background:${badgeColor}; height:100%;"></div>
+                                </div>
+                                <span style="font-size:10px; color:var(--text-muted);">${randomPct}% Benar</span>
+                            </td>
+                            <td style="padding:12px; text-align:center;"><span style="font-size:11px; font-weight:700; color:${badgeColor}">${status}</span></td>
+                        </tr>
+                    `;
+                });
+
+                // Render MathJax ulang agar rumus matematika muncul
+                if (window.MathJax) {
+                    MathJax.typesetPromise([tbody]).catch(err => console.log('MathJax error:', err));
+                }
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:30px; text-align:center;">Belum ada soal untuk mapel ini.</td></tr>';
+            }
+        }
+
+        function renderChart(skorArray) {
+            const ctx = document.getElementById('chartAnalisis').getContext('2d');
+            const dist = [0, 0, 0, 0, 0];
+            skorArray.forEach(s => {
+                if (s <= 20) dist[0]++;
+                else if (s <= 40) dist[1]++;
+                else if (s <= 60) dist[2]++;
+                else if (s <= 80) dist[3]++;
+                else dist[4]++;
+            });
+
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['0-20', '21-40', '41-60', '61-80', '81-100'],
+                    datasets: [{
+                        label: 'Siswa',
+                        data: dist,
+                        backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#6366f1'],
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } }
+                }
+            });
+        }
+
+        function analisisSoal() {
+            // Shortcut dari halaman laporan
+            bukaHalaman('analisis-soal-page', document.querySelector('[onclick*="analisis-soal-page"]'));
+        }
+
+        async function populateAnalisisFilters() {
+            const selectMapel = document.getElementById('ana-filter-mapel');
+            const selectKelas = document.getElementById('ana-filter-kelas');
+
+            const { data } = await db.from('jawaban_ujian').select('mapel, kelas');
+            if (!data) return;
+
+            const mapels = [...new Set(data.map(d => d.mapel))].sort();
+            const kelass = [...new Set(data.map(d => d.kelas))].sort();
+
+            const curM = selectMapel.value;
+            const curK = selectKelas.value;
+
+            selectMapel.innerHTML = '<option value="">Semua Mapel</option>';
+            mapels.forEach(m => {
+                selectMapel.innerHTML += `<option value="${m}">${m}</option>`;
+            });
+
+            selectKelas.innerHTML = '<option value="">Semua Kelas</option>';
+            kelass.forEach(k => {
+                selectKelas.innerHTML += `<option value="${k}">${k}</option>`;
+            });
+
+            selectMapel.value = curM;
+            selectKelas.value = curK;
+
+            loadAnalisisData();
+        }
+
+        // --- EXPORT NILAI KE EXCEL ---
+        async function exportExcel() {
+            const mapel = document.getElementById('filter-mapel-laporan').value;
+            const kelas = document.getElementById('filter-kelas-laporan').value;
+
+            if (!mapel || !kelas) {
+                showToast("Silakan pilih 'Mapel' dan 'Kelas' terlebih dahulu di dropdown filter sebelum mengekspor data ke Excel.", 'info');
+                return;
+            }
+
+            // Ambil data langsung dari database
+            const { data, error } = await db.from('jawaban_ujian')
+                .select('*')
+                .eq('mapel', mapel)
+                .eq('kelas', kelas)
+                .order('nama', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                showToast("Tidak ada data nilai untuk diekspor pada kelas dan mapel ini.", 'error');
+                return;
+            }
+
+            // Format struktur data untuk Excel
+            const strukturData = [
+                ["No", "Nama Siswa", "Kelas", "Mata Pelajaran", "Skor PG", "Jawaban Essay", "Durasi Pengerjaan", "Jumlah Pelanggaran", "Status Akhir", "Waktu Selesai"]
+            ];
+
+            data.forEach((s, index) => {
+                strukturData.push([
+                    index + 1,
+                    s.nama,
+                    s.kelas,
+                    s.mapel,
+                    s.skor_pg !== null ? s.skor_pg : 0,
+                    s.jawaban_essay || '-',
+                    s.durasi || '-',
+                    s.pelanggaran || 0,
+                    s.status || 'SELESAI',
+                    s.created_at ? new Date(s.created_at).toLocaleString('id-ID') : '-'
+                ]);
+            });
+
+            // Konversi ke Worksheet Excel
+            const worksheet = XLSX.utils.aoa_to_sheet(strukturData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Nilai");
+
+            // Atur lebar kolom
+            worksheet['!cols'] = [
+                { wch: 5 },   // No
+                { wch: 35 },  // Nama
+                { wch: 15 },  // Kelas
+                { wch: 20 },  // Mapel
+                { wch: 10 },  // Skor
+                { wch: 50 },  // Jawaban Essay
+                { wch: 20 },  // Durasi
+                { wch: 20 },  // Pelanggaran
+                { wch: 30 },  // Status
+                { wch: 25 }   // Waktu
+            ];
+
+            // Trigger Download
+            const fileName = `Nilai_${mapel}_${kelas}.xlsx`.replace(/\s+/g, '_');
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        // --- 4. LOGIC MENDOWNLOAD TEMPLATE EXCEL OTOMATIS ---
+        function downloadTemplate() {
+            const strukturData = [
+                ["No", "Pertanyaan", "Opsi A", "Opsi B", "Opsi C", "Opsi D", "Opsi E", "Kunci Jawaban", "Tipe Soal (PG/ESSAY)"],
+                [1, "Tulis soal pilihan ganda di sini...", "Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D", "Pilihan E", "A", "PG"],
+                [2, "Tulis soal essay di sini...", "", "", "", "", "", "", "ESSAY"]
+            ];
+
+            // 2. Gunakan library SheetJS untuk mengubah array menjadi file Excel (.xlsx)
+            const worksheet = XLSX.utils.aoa_to_sheet(strukturData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Soal Ujian");
+
+            // 3. Atur lebar kolom Excel agar rapi saat dibuka
+            worksheet['!cols'] = [
+                { wch: 5 },   // No
+                { wch: 60 },  // Pertanyaan
+                { wch: 20 },  // A
+                { wch: 20 },  // B
+                { wch: 20 },  // C
+                { wch: 20 },  // D
+                { wch: 20 },  // E
+                { wch: 15 },  // Kunci
+                { wch: 22 }   // Tipe Soal
+            ];
+
+            // 4. Picu proses download ke browser
+            XLSX.writeFile(workbook, "Template_Soal_Mutiga.xlsx");
+        }
+
+        // --- 5. LOGIC MEMBACA FILE EXCEL (Upload Soal) ---
+        document.getElementById('inputExcel').addEventListener('change', async function (e) {
+            const file = e.target.files[0];
+            const mapel = document.getElementById('mapel-upload').value.trim();
+            const status = document.getElementById('status-upload');
+
+            if (!file) return;
+            if (!mapel) {
+                status.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-circle"></i> Isi dulu Nama Mata Pelajaran di atas sebelum upload file!</span>`;
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            status.innerHTML = `<span style="color: var(--primary);"><i class="fas fa-spinner fa-spin"></i> Membaca file Excel...</span>`;
+
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const dataArray = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(dataArray, { type: 'array' });
+                    const namaSheetPertama = workbook.SheetNames[0];
+                    const isiExcel = XLSX.utils.sheet_to_json(workbook.Sheets[namaSheetPertama]);
+
+                    status.innerHTML = `<span style="color: var(--primary);"><i class="fas fa-spinner fa-spin"></i> Menyimpan ${isiExcel.length} soal ke database...</span>`;
+
+                    // Mapping data Excel ke struktur Supabase
+                    const dataSoalSupabase = isiExcel.map(row => ({
+                        mapel: mapel,
+                        pertanyaan: row["Pertanyaan"] || "",
+                        opsi_a: row["Opsi A"] || "",
+                        opsi_b: row["Opsi B"] || "",
+                        opsi_c: row["Opsi C"] || "",
+                        opsi_d: row["Opsi D"] || "",
+                        opsi_e: row["Opsi E"] || "",
+                        kunci_jawaban: row["Kunci Jawaban"] || "",
+                        tipe_soal: row["Tipe Soal (PG/ESSAY)"] || "PG"
+                    }));
+
+                    const { error } = await db.from('bank_soal').insert(dataSoalSupabase);
+
+                    if (error) throw error;
+
+                    status.innerHTML = `<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Sukses! ${isiExcel.length} baris soal untuk "${mapel}" tersimpan di database.</span>`;
+                    document.getElementById('inputExcel').value = ''; // Bersihkan upload form
+
+                    // Auto-update & tampilkan di Preview Soal
+                    await populatePreviewMapel();
+                    document.getElementById('preview-mapel').value = mapel;
+                    loadPreviewSoal();
+                } catch (err) {
+                    status.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Gagal menyimpan soal: ${err.message}</span>`;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // --- 5B. LOGIC MEMBACA FILE WORD (.docx) VIA MAMMOTH ---
+        function downloadTemplateWord() {
+            const htmlString = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Template Soal Ujian</title>
+<style>
+    body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; }
+    h1 { font-size: 16pt; text-align: center; font-weight: bold; }
+    .box { border: 1px solid #000; padding: 10px; background-color: #f9f9f9; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+    <h1>TEMPLATE DAN PANDUAN FORMAT SOAL WORD</h1>
+    
+    <div class="box">
+        <strong>Aturan Penting:</strong>
+        <br>1. Nomor soal harus diawali angka dan titik (Contoh: <b>1. </b>)
+        <br>2. Opsi jawaban (Pilihan Ganda) harus diawali huruf kapital dan titik (Contoh: <b>A. </b>)
+        <br>3. Kunci Jawaban ditaruh di paling bawah setiap soal (Contoh: <b>Kunci: A</b>)
+        <br>4. Untuk soal Essay, gunakan kode <b>Tipe: ESSAY</b> tepat di bawah pertanyaan.
+        <br>5. Gambar/Rumus silakan di-paste bebas di posisi pertanyaan atau opsi.
+    </div>
+
+    <br><br><b>CONTOH 1 (Pilihan Ganda Biasa):</b><br>
+    1. Siapakah penemu bola lampu pijar?
+    <br>A. Thomas Alva Edison
+    <br>B. Albert Einstein
+    <br>C. Isaac Newton
+    <br>D. Nikola Tesla
+    <br>E. Alexander Graham Bell
+    <br>Kunci: A
+
+    <br><br><b>CONTOH 2 (Pilihan Ganda dengan Gambar):</b><br>
+    2. Perhatikan logo berikut!
+    <br>[Hapus teks ini dan Paste Gambar Logo Di Sini]
+    <br>Logo di atas merupakan logo perusahaan teknologi apa?
+    <br>A. Apple
+    <br>B. Microsoft
+    <br>C. Google
+    <br>D. Facebook
+    <br>E. Amazon
+    <br>Kunci: C
+
+    <br><br><b>CONTOH 3 (Soal Essay):</b><br>
+    3. Jelaskan proses terjadinya hujan secara singkat dan jelas!
+    <br>Tipe: ESSAY
+
+    <br><br><br>
+    <hr>
+    <i>--- Silakan hapus panduan di atas dan mulai ketik soal Anda di bawah garis ini ---</i>
+    <br><br>
+    1. Pertanyaan pertama Anda...
+    <br>A. 
+    <br>B. 
+    <br>C. 
+    <br>D. 
+    <br>E. 
+    <br>Kunci: A
+
+</body>
+</html>`;
+
+            // Buat file MS Word dengan MIME type khusus
+            const blob = new Blob(['\ufeff', htmlString], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'Template_Soal_Mutiga.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('inputWord').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const mapel = document.getElementById('mapel-upload').value.trim();
+            const status = document.getElementById('status-upload');
+
+            if (!file) return;
+            if (!mapel) {
+                status.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-circle"></i> Isi dulu Nama Mata Pelajaran sebelum upload file Word!</span>`;
+                e.target.value = '';
+                return;
+            }
+
+            status.innerHTML = `<span style="color: var(--primary);"><i class="fas fa-spinner fa-spin"></i> Membaca dokumen Word...</span>`;
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const arrayBuffer = event.target.result;
+
+                mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
+                    .then(async function (result) {
+                        const htmlContent = result.value;
+
+                        // Parse HTML hasil dari Mammoth
+                        const div = document.createElement('div');
+                        div.innerHTML = htmlContent;
+
+                        let soalArray = [];
+                        let currentSoal = null;
+                        let currentMode = null; // 'Q', 'A', 'B', 'C', 'D', 'E'
+
+                        Array.from(div.childNodes).forEach(node => {
+                            let textMatch = node.textContent.trim();
+
+                            let isNewSoal = /^\d+\.\s/.test(textMatch);
+                            let isOpsiA = /^A\.\s/i.test(textMatch);
+                            let isOpsiB = /^B\.\s/i.test(textMatch);
+                            let isOpsiC = /^C\.\s/i.test(textMatch);
+                            let isOpsiD = /^D\.\s/i.test(textMatch);
+                            let isOpsiE = /^E\.\s/i.test(textMatch);
+                            let isKunci = /^Kunci\s*:\s*/i.test(textMatch);
+                            let isTipe = /^Tipe\s*:\s*ESSAY/i.test(textMatch);
+
+                            if (isNewSoal) {
+                                if (currentSoal) soalArray.push(currentSoal);
+                                currentSoal = {
+                                    mapel: mapel, pertanyaan: '', opsi_a: '', opsi_b: '', opsi_c: '', opsi_d: '', opsi_e: '',
+                                    kunci_jawaban: '', tipe_soal: 'PG'
+                                };
+                                currentMode = 'Q';
+                                let clone = node.cloneNode(true);
+                                clone.innerHTML = clone.innerHTML.replace(/^\d+\.\s*/, '');
+                                currentSoal.pertanyaan += clone.outerHTML;
+                            }
+                            else if (currentSoal) {
+                                if (isOpsiA) { currentMode = 'A'; let c = node.cloneNode(true); c.innerHTML = c.innerHTML.replace(/^A\.\s*/i, ''); currentSoal.opsi_a += c.outerHTML; }
+                                else if (isOpsiB) { currentMode = 'B'; let c = node.cloneNode(true); c.innerHTML = c.innerHTML.replace(/^B\.\s*/i, ''); currentSoal.opsi_b += c.outerHTML; }
+                                else if (isOpsiC) { currentMode = 'C'; let c = node.cloneNode(true); c.innerHTML = c.innerHTML.replace(/^C\.\s*/i, ''); currentSoal.opsi_c += c.outerHTML; }
+                                else if (isOpsiD) { currentMode = 'D'; let c = node.cloneNode(true); c.innerHTML = c.innerHTML.replace(/^D\.\s*/i, ''); currentSoal.opsi_d += c.outerHTML; }
+                                else if (isOpsiE) { currentMode = 'E'; let c = node.cloneNode(true); c.innerHTML = c.innerHTML.replace(/^E\.\s*/i, ''); currentSoal.opsi_e += c.outerHTML; }
+                                else if (isKunci) {
+                                    currentSoal.kunci_jawaban = textMatch.replace(/^Kunci\s*:\s*/i, '').trim().toUpperCase().charAt(0); // Ambil huruf pertama saja (A/B/C/D/E)
+                                    currentMode = null;
+                                }
+                                else if (isTipe) {
+                                    currentSoal.tipe_soal = 'ESSAY';
+                                    currentMode = null;
+                                }
+                                else {
+                                    // Konten lanjutan (misal paragraf baru atau gambar untuk mode aktif)
+                                    if (currentMode === 'Q') currentSoal.pertanyaan += node.outerHTML;
+                                    else if (currentMode === 'A') currentSoal.opsi_a += node.outerHTML;
+                                    else if (currentMode === 'B') currentSoal.opsi_b += node.outerHTML;
+                                    else if (currentMode === 'C') currentSoal.opsi_c += node.outerHTML;
+                                    else if (currentMode === 'D') currentSoal.opsi_d += node.outerHTML;
+                                    else if (currentMode === 'E') currentSoal.opsi_e += node.outerHTML;
+                                }
+                            }
+                        });
+
+                        if (currentSoal) soalArray.push(currentSoal);
+
+                        if (soalArray.length === 0) {
+                            status.innerHTML = `<span style="color: red;"><i class="fas fa-times-circle"></i> Tidak ada soal yang ditemukan. Pastikan format penulisan sudah benar!</span>`;
+                            return;
+                        }
+
+                        status.innerHTML = `<span style="color: var(--primary);"><i class="fas fa-spinner fa-spin"></i> Menyimpan ${soalArray.length} soal (termasuk gambar) ke database...</span>`;
+
+                        // Insert ke Supabase
+                        const { error } = await db.from('bank_soal').insert(soalArray);
+
+                        if (error) throw error;
+
+                        status.innerHTML = `<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Sukses! ${soalArray.length} soal untuk "${mapel}" dari Word berhasil disimpan.</span>`;
+                        document.getElementById('inputWord').value = '';
+
+                        // Auto-update & tampilkan di Preview Soal
+                        await populatePreviewMapel();
+                        document.getElementById('preview-mapel').value = mapel;
+                        loadPreviewSoal();
+                    })
+                    .catch(function (err) {
+                        console.error(err);
+                        status.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Gagal mengekstrak Word: ${err.message}</span>`;
+                    });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // --- 5C. PREVIEW SOAL ---
+        async function populatePreviewMapel() {
+            const select = document.getElementById('preview-mapel');
+            const prevVal = select.value;
+            const { data, error } = await db.from('bank_soal').select('mapel');
+            if (error || !data) return;
+
+            const mapelSet = new Set();
+            data.forEach(d => { if (d.mapel) mapelSet.add(d.mapel.trim()); });
+
+            select.innerHTML = '<option value="">— Pilih Mapel —</option>';
+            [...mapelSet].sort().forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                select.appendChild(opt);
+            });
+            if ([...mapelSet].includes(prevVal)) select.value = prevVal;
+        }
+
+        async function loadPreviewSoal() {
+            const mapel = document.getElementById('preview-mapel').value;
+            const container = document.getElementById('preview-container');
+
+            if (!mapel) {
+                container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">Pilih Mata Pelajaran di atas untuk melihat preview soal.</div>';
+                return;
+            }
+
+            container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--primary);"><i class="fas fa-spinner fa-spin"></i> Memuat soal...</div>';
+
+            const { data, error } = await db.from('bank_soal').select('*').eq('mapel', mapel).order('id', { ascending: true });
+
+            if (error || !data || data.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--danger);"><i class="fas fa-exclamation-circle"></i> Tidak ada soal ditemukan untuk mapel ini.</div>';
+                return;
+            }
+
+            let html = '';
+            data.forEach((s, idx) => {
+                html += `
+                    <div class="soal-item" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="checkbox" class="cb-soal" value="${s.id}">
+                                <strong style="color:var(--navy-mid);">Soal No. ${idx + 1}</strong>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <span class="badge" style="background:${s.tipe_soal === 'ESSAY' ? '#e0e7ff' : '#dcfce7'}; color:${s.tipe_soal === 'ESSAY' ? '#3730a3' : '#166534'}; border:none;">${s.tipe_soal || 'PG'}</span>
+                                <button onclick="hapusSatuSoal(${s.id})" style="background:none; border:none; color:var(--danger); cursor:pointer;" title="Hapus Soal ini">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="teks-pertanyaan" style="margin-bottom: 12px; line-height:1.5; font-size:15px;">${s.pertanyaan}</div>
+                `;
+
+                if (s.tipe_soal !== 'ESSAY') {
+                    html += `
+                        <ul style="list-style-type: none; padding-left: 0; margin-bottom: 15px; font-size:14px;">
+                            <li style="padding:4px 0; ${s.kunci_jawaban === 'A' ? 'font-weight:bold; color:var(--success);' : ''}"><strong>A.</strong> ${s.opsi_a || ''}</li>
+                            <li style="padding:4px 0; ${s.kunci_jawaban === 'B' ? 'font-weight:bold; color:var(--success);' : ''}"><strong>B.</strong> ${s.opsi_b || ''}</li>
+                            <li style="padding:4px 0; ${s.kunci_jawaban === 'C' ? 'font-weight:bold; color:var(--success);' : ''}"><strong>C.</strong> ${s.opsi_c || ''}</li>
+                            <li style="padding:4px 0; ${s.kunci_jawaban === 'D' ? 'font-weight:bold; color:var(--success);' : ''}"><strong>D.</strong> ${s.opsi_d || ''}</li>
+                            <li style="padding:4px 0; ${s.kunci_jawaban === 'E' ? 'font-weight:bold; color:var(--success);' : ''}"><strong>E.</strong> ${s.opsi_e || ''}</li>
+                        </ul>
+                    `;
+                }
+
+                html += `
+                        <div style="background:#f1f5f9; padding:8px 12px; border-radius:4px; font-size:13px; color:#475569;">
+                            <strong>Kunci Jawaban:</strong> <span style="${s.tipe_soal !== 'ESSAY' ? 'font-weight:bold; color:var(--success);' : ''}">${s.kunci_jawaban || '-'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+
+            // Render ulang MathJax agar rumus matematika dari soal yang baru diload terbaca
+            if (window.MathJax) {
+                MathJax.typesetPromise([container]).catch(function (err) { console.error(err); });
+            }
+        }
+
+        // --- 6. LOGIC PENJADWALAN ---
+        async function populateJadwalMapelDropdown() {
+            const select = document.getElementById('jadwal-mapel');
+            const { data, error } = await db.from('bank_soal').select('mapel');
+            if (error || !data) return;
+
+            const mapelSet = new Set();
+            data.forEach(d => { if (d.mapel) mapelSet.add(d.mapel.trim()); });
+
+            select.innerHTML = '<option value="">— Pilih Mapel dari Bank Soal —</option>';
+            [...mapelSet].sort().forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                select.appendChild(opt);
+            });
+        }
+
+        // Simpan waktu lokal sebagai string agar tidak ada konversi timezone
+        function toLocalISOString(datetimeLocalValue) {
+            if (!datetimeLocalValue) return null;
+            // datetime-local format: "YYYY-MM-DDTHH:mm" — simpan langsung dengan detik & offset lokal
+            const d = new Date(datetimeLocalValue);
+            const pad = n => String(n).padStart(2, '0');
+            // Offset timezone lokal dalam menit
+            const off = -d.getTimezoneOffset();
+            const sign = off >= 0 ? '+' : '-';
+            const absOff = Math.abs(off);
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${pad(Math.floor(absOff / 60))}:${pad(absOff % 60)}`;
+        }
+
+        async function simpanJadwal() {
+            const mapel = document.getElementById('jadwal-mapel').value.trim();
+            const jurusan = document.getElementById('jadwal-jurusan') ? document.getElementById('jadwal-jurusan').value.trim() : '';
+            const kelasInput = document.getElementById('jadwal-kelas').value.trim();
+            const waktuMulaiRaw = document.getElementById('jadwal-waktu').value;
+            const waktuSelesaiRaw = document.getElementById('jadwal-selesai').value;
+            const durasiInput = parseInt(document.getElementById('jadwal-durasi').value);
+            const statusEl = document.getElementById('status-jadwal');
+
+            if (!mapel) {
+                statusEl.innerHTML = `<span style="color:red;"><i class="fas fa-exclamation-circle"></i> Nama mata pelajaran wajib diisi!</span>`;
+                return;
+            }
+            if (!waktuMulaiRaw || !waktuSelesaiRaw) {
+                statusEl.innerHTML = `<span style="color:red;"><i class="fas fa-exclamation-circle"></i> Window waktu mulai dan selesai wajib diisi!</span>`;
+                return;
+            }
+            if (new Date(waktuSelesaiRaw) <= new Date(waktuMulaiRaw)) {
+                statusEl.innerHTML = `<span style="color:red;"><i class="fas fa-exclamation-circle"></i> Batas masuk harus lebih besar dari mulai masuk!</span>`;
+                return;
+            }
+            if (!durasiInput || durasiInput < 1) {
+                statusEl.innerHTML = `<span style="color:red;"><i class="fas fa-exclamation-circle"></i> Durasi ujian wajib diisi (minimal 1 menit)!</span>`;
+                return;
+            }
+
+            const waktuMulai = toLocalISOString(waktuMulaiRaw);
+            const waktuSelesai = toLocalISOString(waktuSelesaiRaw);
+
+            statusEl.innerHTML = `<span style="color:var(--primary);"><i class="fas fa-spinner fa-spin"></i> Menyimpan...</span>`;
+
+            let kelasFinal = kelasInput || null;
+            if (jurusan && kelasInput) kelasFinal = jurusan + "::" + kelasInput;
+
+            const { error } = await db.from('jadwal_ujian').insert([{
+                mapel, kelas: kelasFinal,
+                waktu_mulai: waktuMulai,
+                waktu_selesai: waktuSelesai,
+                durasi_menit: durasiInput,
+                is_aktif: true
+            }]);
+
+            if (error) {
+                statusEl.innerHTML = `<span style="color:red;"><i class="fas fa-times-circle"></i> Gagal: ${error.message}</span>`;
+                return;
+            }
+
+            statusEl.innerHTML = `<span style="color:#10b981;"><i class="fas fa-check-circle"></i> Jadwal "${mapel}" — ${durasiInput} menit/siswa berhasil disimpan!</span>`;
+            document.getElementById('jadwal-mapel').value = '';
+            if (document.getElementById('jadwal-jurusan')) document.getElementById('jadwal-jurusan').value = '';
+            document.getElementById('jadwal-kelas').value = '';
+            document.getElementById('jadwal-waktu').value = '';
+            document.getElementById('jadwal-selesai').value = '';
+            document.getElementById('jadwal-durasi').value = '';
+            loadJadwal();
+        }
+
+        async function loadJadwal() {
+            const tbody = document.getElementById('tabel-jadwal');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px;"><i class="fas fa-spinner fa-spin"></i> Memuat data jadwal...</td></tr>';
+
+            const { data, error } = await db.from('jadwal_ujian').select('*').order('id', { ascending: false });
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px; color:red;">Gagal memuat: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px; color:var(--text-muted);">Belum ada jadwal. Silakan buat jadwal baru di sebelah kiri.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            // Reset timeout saat fungsi dipanggil agar tidak dobel
+            if (jadwalTimeout) {
+                clearTimeout(jadwalTimeout);
+                jadwalTimeout = null;
+            }
+
+            let nextRefreshTime = Infinity;
+            const idsToAutoDeactivate = []; // Kumpulkan ID jadwal yang sudah berakhir tapi masih aktif
+
+            data.forEach(j => {
+                // Pastikan nilai boolean is_aktif terbaca dengan benar
+                const isAktif = j.is_aktif === true;
+                const checked = isAktif ? 'checked' : '';
+
+                let kelasLabel = "";
+                if (!j.kelas) {
+                    kelasLabel = `<span style="color:#94a3b8; font-size:12px;">Semua kelas</span>`;
+                } else if (typeof j.kelas === 'string' && j.kelas.includes('::')) {
+                    const parts = j.kelas.split('::');
+                    kelasLabel = `<div style="line-height:1.4; min-width:150px;">
+                        <div style="font-size:10px; color:var(--primary); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">${parts[0]}</div>
+                        <div style="font-size:13px; color:var(--navy-dark); font-weight:500;">${parts[1]}</div>
+                    </div>`;
+                } else {
+                    kelasLabel = `<span class="badge" style="background:#eff6ff; color:var(--primary); border:1px solid #dbeafe;">${j.kelas}</span>`;
+                }
+
+                const now = new Date();
+                const tMulai = j.waktu_mulai ? new Date(j.waktu_mulai) : null;
+                let tSelesai = j.waktu_selesai ? new Date(j.waktu_selesai) : null;
+
+                // Jika data waktu tidak valid, tampilkan placeholder
+                if (!tMulai || isNaN(tMulai.getTime())) {
+                    tbody.innerHTML += `<tr><td colspan="8" style="color:red; text-align:center;">Data jadwal ID ${j.id} tidak valid (Waktu Mulai kosong)</td></tr>`;
+                    return;
+                }
+
+                // Fallback jika waktu_selesai kosong (untuk data lama)
+                if (!tSelesai || isNaN(tSelesai.getTime())) {
+                    tSelesai = new Date(tMulai.getTime() + (j.durasi_menit || 90) * 60000);
+                }
+
+                let statusAuto = '';
+                if (!isAktif || now > tSelesai) {
+                    // Tampilkan Nonaktif langsung \u2014 baik karena toggle OFF maupun waktu sudah berakhir
+                    statusAuto = '<span class="badge" style="background:#f8fafc; color:#94a3b8; border:1px solid #e2e8f0; white-space:nowrap;"><i class="fas fa-power-off" style="font-size:10px; margin-right:4px;"></i>Nonaktif</span>';
+                    // Tandai untuk auto-nonaktif di DB jika masih aktif secara database
+                    if (isAktif && now > tSelesai) idsToAutoDeactivate.push(j.id);
+                } else if (now < tMulai) {
+                    statusAuto = '<span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; white-space:nowrap;">⏳ Belum Dimulai</span>';
+                } else {
+                    statusAuto = '<span class="badge" style="background:#f0fdf4; color:#10b981; border:1px solid #dcfce7; white-space:nowrap; animation:pulse 1.5s infinite;">🟢 Sedang Berjalan</span>';
+                }
+
+
+                // Durasi per siswa: ambil dari kolom durasi_menit (bukan hitung dari selisih window)
+                const durasiPerSiswa = j.durasi_menit || null;
+                const durasiLabel = durasiPerSiswa
+                    ? `<div style="text-align:center; line-height:1.4;">
+                        <strong style="font-size:18px; color:#10b981;">${durasiPerSiswa}</strong>
+                        <div style="font-size:10px; color:var(--text-muted); font-weight:600;">menit</div>
+                      </div>`
+                    : `<span style="color:#94a3b8; font-size:11px;">—</span>`;
+
+                const displayWaktu = `
+                    <div style="line-height:1.6; font-size:12px; white-space:nowrap;">
+                        <div style="font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:2px;">📅 Siswa Boleh Masuk:</div>
+                        <div style="font-weight:700; color:var(--navy-dark); font-size:11px;">${tMulai.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                        <div>
+                            <span style="color:#10b981; font-weight:700; font-size:13px;">${tMulai.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span style="color:#94a3b8; margin:0 2px;">s/d</span>
+                            <span style="color:#ef4444; font-weight:700; font-size:13px;">${tSelesai.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                    </div>
+                `;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="text-align:center;"><input type="checkbox" class="cb-jadwal" value="${j.id}"></td>
+                        <td style="font-weight:700; color:var(--navy-dark); text-align:left; padding-left:15px;">${j.mapel}</td>
+                        <td style="text-align:center;">${kelasLabel}</td>
+                        <td style="text-align:center;">${displayWaktu}</td>
+                        <td style="text-align:center;">${durasiLabel}</td>
+                        <td style="text-align:center;">${statusAuto}</td>
+                        <td style="text-align:center; min-width:80px;">
+                            <label class="toggle">
+                                <input type="checkbox" ${checked} onchange="toggleAktifJadwal(${j.id}, this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </td>
+                        <td style="text-align:center;">
+                            <div style="display:flex; gap:5px; justify-content:center;">
+                                <button class="btn btn-primary" style="padding:6px 8px; font-size:11px; background:var(--primary);" onclick="mulaiEditJadwal(${j.id})" title="Edit Jadwal">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger" style="padding:6px 8px; font-size:11px;" onclick="hapusJadwal(${j.id}, '${j.mapel}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                // Cari waktu trigger event selanjutnya (entah mulai atau berakhir)
+                if (tMulai > now && tMulai.getTime() < nextRefreshTime) {
+                    nextRefreshTime = tMulai.getTime();
+                }
+                if (tSelesai > now && tSelesai.getTime() < nextRefreshTime) {
+                    nextRefreshTime = tSelesai.getTime();
+                }
+            });
+
+            // === AUTO-NONAKTIF: Update is_aktif=false untuk jadwal yang sudah berakhir ===
+            if (idsToAutoDeactivate.length > 0) {
+                await db.from('jadwal_ujian')
+                    .update({ is_aktif: false })
+                    .in('id', idsToAutoDeactivate);
+                showToast(
+                    `${idsToAutoDeactivate.length} jadwal dinonaktifkan otomatis karena waktu pelaksanaan sudah berakhir.`,
+                    'info'
+                );
+                loadJadwal(); // Reload agar toggle UI ikut terupdate
+                return;
+            }
+
+            // Jadwalkan auto-refresh tabel persis saat kejadian terdekat (tambah 500ms safety gap)
+            if (nextRefreshTime !== Infinity) {
+                const delayMs = nextRefreshTime - new Date().getTime() + 500;
+                // Cegah setTimeout terlalu besar (opsional, maks 24 jam)
+                if (delayMs < 86400000 && document.getElementById('jadwal').classList.contains('active')) {
+                    jadwalTimeout = setTimeout(() => {
+                        loadJadwal();
+                    }, Math.max(1000, delayMs)); // min delay 1 detik agar aman
+                }
+            }
+        }
+
+        async function toggleAktifJadwal(id, isAktif) {
+            const { error } = await db.from('jadwal_ujian').update({ is_aktif: isAktif }).eq('id', id);
+            if (error) {
+                showToast('Gagal mengubah status: ' + error.message, 'error');
+                loadJadwal();
+            } else {
+                showToast(`Jadwal ${isAktif ? 'diaktifkan' : 'dinonaktifkan'} `, 'info');
+                loadJadwal();
+            }
+        }
+
+        async function hapusJadwal(id, mapel) {
+            if (!confirm(`Hapus jadwal "${mapel}" ? Tindakan ini tidak bisa dibatalkan.`)) return;
+            const { error } = await db.from('jadwal_ujian').delete().eq('id', id);
+            if (error) showToast('Gagal menghapus: ' + error.message, 'error');
+            else {
+                showToast(`Jadwal "${mapel}" berhasil dihapus`, 'success');
+                loadJadwal();
+            }
+        }
+
+        let editingJadwalId = null;
+        async function mulaiEditJadwal(id) {
+            const { data, error } = await db.from('jadwal_ujian').select('*').eq('id', id).single();
+            if (error || !data) return;
+
+            editingJadwalId = id;
+            document.getElementById('jadwal-mapel').value = data.mapel;
+
+            // Logika split Jurusan::Kelas kembali ke input masing-masing
+            const inputJurusan = document.getElementById('jadwal-jurusan');
+            const inputKelas = document.getElementById('jadwal-kelas');
+
+            if (data.kelas && data.kelas.includes('::')) {
+                const parts = data.kelas.split('::');
+                if (inputJurusan) inputJurusan.value = parts[0];
+                inputKelas.value = parts[1];
+            } else {
+                if (inputJurusan) inputJurusan.value = '';
+                inputKelas.value = data.kelas || '';
+            }
+
+            // Konversi ISO → format datetime-local (YYYY-MM-DDTHH:mm)
+            function toLocalDatetimeInput(isoStr) {
+                if (!isoStr) return '';
+                const d = new Date(isoStr);
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+            document.getElementById('jadwal-waktu').value = toLocalDatetimeInput(data.waktu_mulai);
+            document.getElementById('jadwal-selesai').value = toLocalDatetimeInput(data.waktu_selesai);
+            document.getElementById('jadwal-durasi').value = data.durasi_menit || '';
+
+            const btn = document.querySelector('[onclick="simpanJadwal()"]');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-save"></i> Update Jadwal';
+                btn.onclick = updateJadwal;
+            }
+
+            // Scroll ke form
+            document.querySelector('.card-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function updateJadwal() {
+            if (!editingJadwalId) return;
+            const mapel = document.getElementById('jadwal-mapel').value;
+            const jurusan = document.getElementById('jadwal-jurusan') ? document.getElementById('jadwal-jurusan').value.trim() : '';
+            const kelasInput = document.getElementById('jadwal-kelas').value.trim();
+            const mulaiRaw = document.getElementById('jadwal-waktu').value;
+            const selesaiRaw = document.getElementById('jadwal-selesai').value;
+            const durasiInput = parseInt(document.getElementById('jadwal-durasi').value);
+
+            if (!mulaiRaw || !selesaiRaw) return showToast('Window waktu wajib diisi!', 'error');
+            if (new Date(selesaiRaw) <= new Date(mulaiRaw)) return showToast('Batas masuk harus setelah mulai masuk!', 'error');
+            if (!durasiInput || durasiInput < 1) return showToast('Durasi ujian wajib diisi (min 1 menit)!', 'error');
+
+            const mulai = toLocalISOString(mulaiRaw);
+            const selesai = toLocalISOString(selesaiRaw);
+
+            let kelasFinal = kelasInput || null;
+            if (jurusan && kelasInput) kelasFinal = jurusan + "::" + kelasInput;
+
+            const { error } = await db.from('jadwal_ujian').update({
+                mapel, kelas: kelasFinal,
+                waktu_mulai: mulai,
+                waktu_selesai: selesai,
+                durasi_menit: durasiInput,
+                is_aktif: true
+            }).eq('id', editingJadwalId);
+
+            if (error) return showToast('Gagal update: ' + error.message, 'error');
+
+            showToast(`Jadwal diperbarui! Durasi: ${durasiInput} menit / siswa`, 'success');
+            editingJadwalId = null;
+
+            document.querySelectorAll('.card-panel .btn').forEach(btn => {
+                if (btn.innerHTML.includes('Update Jadwal')) {
+                    btn.innerHTML = '<i class="fas fa-plus"></i> Simpan Jadwal';
+                    btn.onclick = simpanJadwal;
+                }
+            });
+
+            document.getElementById('jadwal-mapel').value = '';
+            if (document.getElementById('jadwal-jurusan')) document.getElementById('jadwal-jurusan').value = '';
+            document.getElementById('jadwal-kelas').value = '';
+            document.getElementById('jadwal-waktu').value = '';
+            document.getElementById('jadwal-selesai').value = '';
+            document.getElementById('jadwal-durasi').value = '';
+            document.getElementById('status-jadwal').innerHTML = '';
+            loadJadwal();
+        }
+
+        // --- 7. LIVE MONITORING (REAL-TIME) ---
+        let monitoringChannel = null;
+
+        // === UNIFIED TOAST SYSTEM ===
+        // Durasi tampil: 6 detik, animasi seamless slide-in → progress → slide-out
+        const TOAST_DURATION = 6000; // ms
+
+        function showToast(message, type = 'success') {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                info: 'fa-info-circle',
+                aktif: 'fa-user-check',
+                selesai: 'fa-check-circle',
+                plg: 'fa-exclamation-triangle'
+            };
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <i class="fas ${icons[type] || 'fa-info-circle'}" style="flex-shrink:0; font-size:1.1rem;"></i>
+                <span style="flex:1; line-height:1.4;">${message}</span>
+                <div class="toast-bar" style="animation: toastBarShrink ${TOAST_DURATION}ms linear forwards;"></div>
+                `;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    toast.classList.add('toast-show');
+                });
+            });
+
+            const hideDelay = setTimeout(() => {
+                toast.classList.remove('toast-show');
+                toast.classList.add('toast-hide');
+                toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+            }, TOAST_DURATION);
+
+            toast.addEventListener('click', () => {
+                clearTimeout(hideDelay);
+                toast.classList.remove('toast-show');
+                toast.classList.add('toast-hide');
+                toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+            });
+        }
+
+        function startRealtimeMonitoring() {
+            if (monitoringChannel) { db.removeChannel(monitoringChannel); monitoringChannel = null; }
+
+            monitoringChannel = db.channel('monitoring-live')
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'jawaban_ujian' },
+                    payload => {
+                        console.log('[Realtime Event]', payload);
+                        const s = payload.new;
+                        const prev = payload.old || {};
+                        const ev = payload.eventType;
+
+                        if (ev === 'INSERT') {
+                            showToast(`🟢 ${s.nama} (${s.kelas}) mulai mengerjakan`, 'aktif');
+                        } else if (ev === 'UPDATE') {
+                            if ((s.pelanggaran || 0) > (prev.pelanggaran || 0)) {
+                                showToast(`⚠️ Pelanggaran! ${s.nama} (${s.kelas}) — ${s.pelanggaran}x`, 'plg');
+                            }
+                            if (String(s.status).startsWith('SELESAI') && !String(prev.status || '').startsWith('SELESAI')) {
+                                showToast(`✅ ${s.nama} (${s.kelas}) selesai mengerjakan`, 'selesai');
+                            }
+                        }
+                        // Reload tabel monitoring HANYA jika halaman monitoring sedang aktif
+                        if (document.getElementById('monitoring').classList.contains('active')) {
+                            loadMonitoring();
+                        }
+                    }
+                )
+                .subscribe((status, err) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Realtime terhubung!');
+                    } else {
+                        console.error('❌ Realtime gagal:', status, err);
+                    }
+                });
+        }
+
+        function stopMonitoring() {
+            if (monitoringChannel) {
+                db.removeChannel(monitoringChannel);
+                monitoringChannel = null;
+            }
+        }
+
+        async function populateFilterKelas() {
+            const selectKelas = document.getElementById('filter-kelas-monitoring');
+            const selectMapel = document.getElementById('filter-mapel-monitoring');
+            const { data, error } = await db.from('jadwal_ujian')
+                .select('kelas, mapel').eq('is_aktif', true);
+
+            const kelasSet = new Set();
+            const mapelSet = new Set();
+
+            if (data && !error) {
+                data.forEach(j => {
+                    if (j.kelas) j.kelas.split(',').forEach(k => kelasSet.add(k.trim()));
+                    if (j.mapel) mapelSet.add(j.mapel.trim());
+                });
+            }
+
+            const prevKelas = selectKelas.value;
+            const prevMapel = selectMapel.value;
+
+            selectKelas.innerHTML = '<option value="">Semua Kelas</option>';
+            [...kelasSet].sort().forEach(k => {
+                const opt = document.createElement('option');
+                opt.value = k;
+                opt.textContent = k;
+                selectKelas.appendChild(opt);
+            });
+            if ([...kelasSet].includes(prevKelas)) selectKelas.value = prevKelas;
+
+            selectMapel.innerHTML = '<option value="">Semua Mapel</option>';
+            [...mapelSet].sort().forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                selectMapel.appendChild(opt);
+            });
+            if ([...mapelSet].includes(prevMapel)) selectMapel.value = prevMapel;
+        }
+
+        async function loadMonitoring() {
+            const tbody = document.getElementById('tabel-monitoring');
+            const filterKelas = document.getElementById('filter-kelas-monitoring').value;
+            const filterMapel = document.getElementById('filter-mapel-monitoring').value;
+            const banner = document.getElementById('mon-status-banner');
+
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:16px;"><i class="fas fa-spinner fa-spin"></i> Memuat...</td></tr>';
+
+            const { data: jadwalAktif } = await db.from('jadwal_ujian').select('id').eq('is_aktif', true);
+            const adaUjianAktif = jadwalAktif && jadwalAktif.length > 0;
+
+            let query = db.from('jawaban_ujian').select('*').order('created_at', { ascending: false });
+            if (filterKelas) query = query.eq('kelas', filterKelas);
+            if (filterMapel) query = query.eq('mapel', filterMapel);
+
+            const { data, error } = await query;
+
+            if (error || !data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada siswa yang mengerjakan ujian.</td></tr>';
+                document.getElementById('mon-aktif').innerText = '0';
+                document.getElementById('mon-selesai').innerText = '0';
+                document.getElementById('mon-pelanggaran').innerText = '0';
+
+                if (!adaUjianAktif) {
+                    banner.style.display = 'flex';
+                    banner.innerHTML = '<i class="fas fa-info-circle"></i>&nbsp; Tidak ada ujian yang aktif — Live monitoring dihentikan otomatis.';
+                    stopMonitoring();
+                }
+                return;
+            }
+
+            let cntAktif = 0, cntSelesai = 0, cntPelanggaran = 0;
+            tbody.innerHTML = '';
+
+            data.forEach((s, i) => {
+                const isSelesai = String(s.status).startsWith('SELESAI');
+                const isPlg = parseInt(s.pelanggaran) > 0;
+
+                if (isSelesai) cntSelesai++;
+                else cntAktif++;
+                if (isPlg) cntPelanggaran++;
+
+                const statusBadge = isSelesai
+                    ? `<span class="badge" style="background:#d1fae5; color:#065f46; border:none;">✅ ${s.status}</span>`
+                    : `<span class="badge" style="background:#fef9c3; color:#854d0e; border:none; animation: pulse 1.5s infinite;">🟡 Mengerjakan...</span>`;
+
+                const plgBadge = isPlg
+                    ? `<span style="color:#ef4444; font-weight:700;"><i class="fas fa-exclamation-triangle"></i> ${s.pelanggaran}x</span>`
+                    : `<span style="color:#10b981;">✓ Bersih</span>`;
+
+                const waktu = s.created_at
+                    ? new Date(s.created_at).toLocaleTimeString('id-ID')
+                    : '-';
+
+                tbody.innerHTML += `
+                <tr style="${!isSelesai ? 'background:#fefce8;' : ''}">
+                        <td style="text-align:center;">${i + 1}</td>
+                        <td style="font-weight:600;">${s.nama}</td>
+                        <td style="text-align:center;">
+                            <span class="badge" style="display:inline-block; margin-bottom:3px;">${s.kelas}</span><br>
+                            <span style="font-size:12px; color:var(--text-muted); font-weight:600;">${s.mapel}</span>
+                        </td>
+                        <td style="text-align:center;">${statusBadge}</td>
+                        <td style="text-align:center;">${plgBadge}</td>
+                        <td style="text-align:center; font-size:12px; color:var(--text-muted);">${waktu}</td>
+                    </tr>`;
+            });
+
+            document.getElementById('mon-aktif').innerText = cntAktif;
+            document.getElementById('mon-selesai').innerText = cntSelesai;
+            document.getElementById('mon-pelanggaran').innerText = cntPelanggaran;
+
+            // --- Auto-stop: Semua selesai DAN tidak ada jadwal aktif ---
+            if (cntAktif === 0 && !adaUjianAktif) {
+                banner.style.display = 'flex';
+                banner.innerHTML = '<i class="fas fa-check-circle"></i>&nbsp; Semua siswa sudah selesai & tidak ada ujian aktif — Live monitoring dihentikan otomatis.';
+                stopMonitoring();
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        // stopMonitoring sudah didefinisikan di atas (baris 2416)
+
+        // --- 8. JAM REAL-TIME DI HEADER ---
+        function updateJam() {
+            const elJam = document.getElementById('jam-sekarang');
+            const elTgl = document.getElementById('tanggal-sekarang');
+            const now = new Date();
+            if (elJam) elJam.innerText = now.toLocaleTimeString('id-ID');
+            if (elTgl) {
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                elTgl.innerText = now.toLocaleDateString('id-ID', options);
+            }
+        }
+        setInterval(updateJam, 1000);
+        updateJam();
+
+        // Load data pertama kali aplikasi dibuka
+        loadNilaiSiswa();
+        updateDashboardStats();
+        loadDashboardJadwalAktif();
+        loadRecentActivity();
+
+        // Mulai Realtime subscription secara GLOBAL agar notif muncul di semua halaman
+        startRealtimeMonitoring();
+
+        // Sidebar Toggle Logic
+        document.getElementById('sidebar-toggle').addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+        });
+
+    </script>
+</body>
+
+</html>
