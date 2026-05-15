@@ -10,6 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap"
         rel="stylesheet">
+    <link rel="icon" type="image/png" href="assets/logo-mute.png">
 
     <script>
         window.MathJax = {
@@ -1486,7 +1487,8 @@
         #modalPeringatan,
         #modalBelumLengkap,
         #modalKonfirmasiSubmit,
-        #modalBiodataKosong {
+        #modalBiodataKosong,
+        #modalErrorJaringan {
             position: fixed;
             top: 0;
             left: 0;
@@ -1997,6 +1999,18 @@
             </div>
         </div>
 
+        <div id="modalErrorJaringan">
+            <div class="modal-card">
+                <div class="modal-icon"
+                    style="color: #EF4444; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3);"><i
+                        class="fas fa-wifi"></i></div>
+                <div class="modal-title">Gagal Memuat</div>
+                <div class="modal-text" id="textErrorJaringan">Terjadi kesalahan jaringan atau server.</div>
+                <button class="btn-overlay" onclick="tutupModalErrorJaringan()"><i class="fas fa-check me-2"></i>OK,
+                    Mengerti</button>
+            </div>
+        </div>
+
         <div id="overlaySubmit">
             <div class="submit-loader-wrap">
                 <div class="loader-ring"
@@ -2298,13 +2312,13 @@
                     if (res.success) {
                         startHandler(res.data);
                     } else {
-                        alert("Gagal memuat soal: " + res.error);
+                        tampilkanErrorJaringan("Gagal memuat soal: " + res.error);
                         btnMulai.disabled = false;
                         btnMulai.innerHTML = "Ya, Mulai!";
                     }
                 })
                 .catch(err => {
-                    alert("Terjadi kesalahan jaringan.");
+                    tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengambil soal.");
                     btnMulai.disabled = false;
                     btnMulai.innerHTML = "Ya, Mulai!";
                 });
@@ -2503,6 +2517,21 @@
             } catch (e) { }
         }
 
+        function tampilkanErrorJaringan(pesan) {
+            document.getElementById('textErrorJaringan').innerText = pesan;
+            document.getElementById('modalErrorJaringan').style.display = 'flex';
+        }
+
+        function tutupModalErrorJaringan() {
+            document.getElementById('modalErrorJaringan').style.display = 'none';
+            const elem = document.documentElement;
+            try {
+                if (elem.requestFullscreen) elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+                else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+            } catch (e) { }
+        }
+
         function prosesSubmitFinal(auto = false, jwbParam = null) {
             document.getElementById('modalKonfirmasiSubmit').style.display = 'none';
             const elem = document.documentElement;
@@ -2578,14 +2607,14 @@
                     if (res.success) {
                         successHandler();
                     } else {
-                        alert("Gagal menyimpan jawaban: " + res.error);
+                        tampilkanErrorJaringan("Gagal menyimpan jawaban: " + res.error);
                         document.getElementById('overlaySubmit').style.display = 'none';
                         btnSelesai.disabled = false;
                         btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
                     }
                 })
                 .catch(err => {
-                    alert("Terjadi kesalahan jaringan.");
+                    tampilkanErrorJaringan("Terjadi kesalahan jaringan saat mengirim jawaban.");
                     document.getElementById('overlaySubmit').style.display = 'none';
                     btnSelesai.disabled = false;
                     btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
