@@ -1392,42 +1392,43 @@
         /* ===================== OVERLAY PELANGGARAN ===================== */
         #overlay {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.88);
             z-index: 10000;
             display: none;
+            align-items: center;
+            justify-content: center;
             backdrop-filter: blur(8px);
         }
 
         .overlay-card {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             background: rgba(11, 29, 58, 0.97);
             border: 1px solid rgba(239, 68, 68, 0.35);
             border-radius: 24px;
             padding: 40px 36px;
-            width: calc(100% - 48px);
             max-width: 400px;
+            margin: 20px;
             text-align: center;
             box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1), 0 32px 80px rgba(0, 0, 0, 0.5);
-            animation: shakeIn 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+            animation: shakeIn 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
         }
 
         @keyframes shakeIn {
             0% {
-                transform: translate(-50%, -50%) scale(0.8) rotate(-2deg);
+                transform: scale(0.8) rotate(-2deg);
                 opacity: 0;
             }
 
             60% {
-                transform: translate(-50%, -50%) scale(1.03) rotate(1deg);
+                transform: scale(1.03) rotate(1deg);
                 opacity: 1;
             }
 
             100% {
-                transform: translate(-50%, -50%) scale(1) rotate(0);
+                transform: scale(1) rotate(0);
                 opacity: 1;
             }
         }
@@ -1477,7 +1478,7 @@
         }
 
         .btn-overlay:hover {
-            transform: translate(-50%, -50%) translateY(-1px);
+            transform: translateY(-1px);
             box-shadow: 0 10px 28px rgba(26, 86, 219, 0.45);
         }
 
@@ -1487,33 +1488,39 @@
         #modalKonfirmasiSubmit,
         #modalBiodataKosong {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.75);
             z-index: 9999;
             display: none;
+            align-items: center;
+            justify-content: center;
             backdrop-filter: blur(6px);
         }
 
         #introOverlay {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(6, 14, 31, 0.98);
             z-index: 100000;
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             backdrop-filter: blur(10px);
         }
 
         .modal-card {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             background: rgba(11, 29, 58, 0.97);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 24px;
             padding: 40px 36px;
-            width: calc(100% - 48px);
             max-width: 440px;
+            margin: 20px;
             text-align: center;
             box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
             animation: modalSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -1522,12 +1529,12 @@
         @keyframes modalSlide {
             from {
                 opacity: 0;
-                transform: translate(-50%, calc(-50% + 20px)) scale(0.85);
+                transform: scale(0.85) translateY(20px);
             }
 
             to {
                 opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
+                transform: scale(1) translateY(0);
             }
         }
 
@@ -1613,7 +1620,10 @@
         /* ===================== OVERLAY SUBMIT ===================== */
         #overlaySubmit {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(6, 14, 31, 0.85);
             z-index: 100000;
             display: none;
@@ -1798,8 +1808,7 @@
                 SMK Muhammadiyah 3 Purbalingga</div>
             <div class="modal-title">Selamat Datang</div>
             <div class="modal-text">Ujian Online mewajibkan mode Layar Penuh (Fullscreen) untuk meminimalisir
-                kecurangan.
-                Silakan klik tombol di bawah untuk masuk.</div>
+                kecurangan. Silakan klik tombol di bawah untuk masuk.</div>
             <button class="btn-modal-confirm" style="width: 100%; padding: 14px;" onclick="masukLayarPenuh()"><i
                     class="fas fa-expand" style="margin-right: 8px;"></i>Masuk Layar Penuh</button>
         </div>
@@ -1833,8 +1842,7 @@
                 </h1>
                 <p class="hero-desc">
                     Platform ujian berbasis komputer resmi SMK Muhammadiyah 3 Purbalingga. Kerjakan dengan jujur, tepat
-                    waktu, dan
-                    penuh tanggung jawab.
+                    waktu, dan penuh tanggung jawab.
                 </p>
                 <div class="hero-cta-group">
                     <button class="btn-hero-primary" onclick="masukKeLogin()">
@@ -1884,14 +1892,12 @@
                         <li><span class="rule-num">2</span> <span>Dilarang membuka tab atau aplikasi lain selama ujian
                                 berlangsung.</span></li>
                         <li><span class="rule-num">3</span> <span>Pastikan koneksi internet stabil sebelum memulai
-                                ujian.</span>
-                        </li>
+                                ujian.</span></li>
                         <li><span class="rule-num">4</span> <span>Gunakan waktu pengerjaan sebaik dan seefisien
                                 mungkin.</span></li>
                         <li><span class="rule-num">5</span> <span>Klik tombol <strong
                                     style="color:var(--gold-light);">Selesai</strong> hanya jika sudah yakin dengan
-                                semua jawaban.</span>
-                        </li>
+                                semua jawaban.</span></li>
                         <li><span class="rule-num">6</span> <span>Setiap pelanggaran akan terekam otomatis oleh
                                 sistem.</span></li>
                     </ul>
@@ -1925,8 +1931,7 @@
                     <span id="timer-box">90:00</span>
                 </div>
                 <span id="label-pelanggaran"><i class="fas fa-exclamation-triangle" style="font-size:10px;"></i>
-                    Pelanggaran:
-                    0</span>
+                    Pelanggaran: 0</span>
             </div>
         </nav>
 
@@ -1935,8 +1940,7 @@
                 <div class="overlay-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="overlay-title">Peringatan!</div>
                 <div class="overlay-text">Kamu meninggalkan halaman ujian. Pelanggaran ini telah dicatat dan dilaporkan
-                    ke
-                    pengawas.</div>
+                    ke pengawas.</div>
                 <button class="btn-overlay" onclick="tutupOverlay()"><i class="fas fa-check me-2"></i>Saya
                     Mengerti</button>
             </div>
@@ -1947,8 +1951,7 @@
                 <div class="modal-icon"><i class="fas fa-shield-alt"></i></div>
                 <div class="modal-title">Konfirmasi Ujian</div>
                 <div class="modal-text">Pastikan data sudah benar. Waktu akan mulai berjalan dan kamu tidak boleh
-                    membuka tab
-                    atau aplikasi lain!</div>
+                    membuka tab atau aplikasi lain!</div>
                 <div class="modal-actions">
                     <button class="btn-modal-cancel" onclick="tutupModal()">Batal</button>
                     <button class="btn-modal-confirm" onclick="mulaiUjian()">Ya, Mulai!</button>
@@ -1963,8 +1966,7 @@
                         class="fas fa-user-edit"></i></div>
                 <div class="modal-title">Biodata Belum Lengkap</div>
                 <div class="modal-text">Pastikan kamu sudah mengisi Nama Lengkap, Kelas, dan Mata Pelajaran sebelum
-                    memulai
-                    ujian.</div>
+                    memulai ujian.</div>
                 <button class="btn-overlay"
                     onclick="document.getElementById('modalBiodataKosong').style.display='none'"><i
                         class="fas fa-check me-2"></i>OK, Saya Lengkapi</button>
@@ -1988,8 +1990,7 @@
                 <div class="modal-icon"><i class="fas fa-paper-plane"></i></div>
                 <div class="modal-title">Kirim Jawaban?</div>
                 <div class="modal-text">Yakin ingin mengakhiri ujian? Semua jawaban akan dikirim dan tidak bisa diubah
-                    lagi.
-                </div>
+                    lagi.</div>
                 <div class="modal-actions">
                     <button class="btn-modal-cancel" onclick="tutupModalKonfirmasiSubmit()">Batal</button>
                     <button class="btn-modal-confirm" onclick="prosesSubmitFinal()">Ya, Kirim!</button>
@@ -2003,11 +2004,10 @@
                     style="width: 72px; height: 72px; border-width: 4px; margin: 0 auto 24px; border-top-color: var(--gold);">
                 </div>
                 <div class="modal-title"
-                    style="font-size: 28px; margin-bottom: 12px; font-weight: 800; letter-spacing: 0.5px;">
-                    Sedang Mengirim...</div>
+                    style="font-size: 28px; margin-bottom: 12px; font-weight: 800; letter-spacing: 0.5px;">Sedang
+                    Mengirim...</div>
                 <div class="modal-text" style="font-size: 15px; margin-bottom: 0;">Mohon tunggu sebentar, jangan tutup
-                    halaman
-                    ini.</div>
+                    halaman ini.</div>
             </div>
         </div>
 
@@ -2147,7 +2147,7 @@
             }, 700);
         }
 
-        /* ==================== LOGIKA UJIAN (TIDAK DIUBAH) ==================== */
+        /* ==================== LOGIKA UJIAN ==================== */
         let p_count = 0;
         let s_data = [];
         let t_start;
@@ -2167,18 +2167,17 @@
             const kelas = document.getElementById('kelas').value;
             const mapelSelect = document.getElementById('mapel');
             if (!kelas) { mapelSelect.innerHTML = '<option value="">— Pilih Kelas Dahulu —</option>'; return; }
-            if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbx2K_1rffEVbQ4iq7leZfNvQUfwD4jWoJkx3jlzOznAT5lm0SmpHP3a0HgeXohpirKkxA/exec")
-                return;
-        }
+            mapelSelect.innerHTML = '<option value="">— Memuat mapel... —</option>';
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'getDaftarMapel', data: { kelas: kelas } })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: "getDaftarMapel", kelas: kelas })
             })
-                .then(res => res.json())
-                .then(response => {
+                .then(response => response.json())
+                .then(res => {
+                    const listMapel = res.data;
                     mapelSelect.innerHTML = '<option value="">— Pilih Mata Pelajaran —</option>';
-                    const listMapel = response.data;
                     if (listMapel && listMapel.length > 0) {
                         listMapel.forEach(m => {
                             let opt = document.createElement('option');
@@ -2191,8 +2190,8 @@
                     }
                 })
                 .catch(err => {
-                    mapelSelect.innerHTML = '<option value="">— Gagal Memuat Ujian —</option>';
-                    console.error(err);
+                    mapelSelect.innerHTML = '<option value="">— Gagal Memuat Mapel —</option>';
+                    console.error("Error loading mapel:", err);
                 });
         }
 
@@ -2292,20 +2291,21 @@
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'getSoal', data: { mapel: m } })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: "getSoal", namaSheet: m })
             })
-                .then(res => res.json())
-                .then(response => {
-                    if (response.status === 'success') {
-                        startHandler(response.data);
+                .then(response => response.json())
+                .then(res => {
+                    if (res.success) {
+                        startHandler(res.data);
                     } else {
-                        alert("Gagal memuat soal: " + response.message);
+                        alert("Gagal memuat soal: " + res.error);
                         btnMulai.disabled = false;
                         btnMulai.innerHTML = "Ya, Mulai!";
                     }
                 })
                 .catch(err => {
-                    alert("Error jaringan saat memuat soal.");
+                    alert("Terjadi kesalahan jaringan.");
                     btnMulai.disabled = false;
                     btnMulai.innerHTML = "Ya, Mulai!";
                 });
@@ -2443,11 +2443,12 @@
             if (n && m && document.getElementById('formUjian').style.display === 'block') {
                 fetch(SCRIPT_URL, {
                     method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        action: 'updateStatusAktif',
+                        action: "updateStatusAktif",
                         data: { nama: n, kelas: k, mapel: m, pelanggaran: p_count, isViolation: isViolation }
                     })
-                }).catch(err => console.error(err));
+                }).catch(err => console.error("Gagal kirim sinyal aktif:", err));
             }
         }
 
@@ -2567,28 +2568,28 @@
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
-                    action: 'simpanJawaban',
+                    action: "simpanJawaban",
                     data: { nama: n, kelas: k, mapel: m, jawaban: jwb, pelanggaran: p_count, durasi: dur }
                 })
             })
-                .then(res => res.json())
-                .then(response => {
-                    if (response.status === 'success') {
+                .then(response => response.json())
+                .then(res => {
+                    if (res.success) {
                         successHandler();
                     } else {
-                        alert("Gagal mengirim jawaban: " + response.message);
-                        btnSelesai.disabled = false;
-                        btnSelesai.innerHTML = '<i class="fas fa-paper-plane"></i> <span>Selesai &amp; Kirim Jawaban</span>';
+                        alert("Gagal menyimpan jawaban: " + res.error);
                         document.getElementById('overlaySubmit').style.display = 'none';
+                        btnSelesai.disabled = false;
+                        btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
                     }
                 })
                 .catch(err => {
-                    alert("Error jaringan saat mengirim jawaban. Pastikan koneksi internet stabil.");
-                    btnSelesai.disabled = false;
-                    btnSelesai.innerHTML = '<i class="fas fa-paper-plane"></i> <span>Selesai &amp; Kirim Jawaban</span>';
+                    alert("Terjadi kesalahan jaringan.");
                     document.getElementById('overlaySubmit').style.display = 'none';
-                    console.error(err);
+                    btnSelesai.disabled = false;
+                    btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
                 });
         }
 
@@ -2648,31 +2649,6 @@
             } catch (e) { }
             document.getElementById('introOverlay').style.display = 'none';
         }
-
-        // Perbaikan presisi centering overlay di iframe Apps Script (khusus mobile)
-        function fixOverlayCenter() {
-            const vh = window.innerHeight;
-            const overlays = [
-                document.getElementById('introOverlay'),
-                document.getElementById('modalPeringatan'),
-                document.getElementById('modalBelumLengkap'),
-                document.getElementById('modalKonfirmasiSubmit'),
-                document.getElementById('modalBiodataKosong'),
-                document.getElementById('overlay'),
-                document.getElementById('overlaySubmit')
-            ];
-            overlays.forEach(el => {
-                if (el) {
-                    el.style.height = vh + 'px';
-                }
-            });
-        }
-
-        // Set tinggi overlay menjadi tinggi terlihat yang sebenarnya
-        window.addEventListener('resize', fixOverlayCenter);
-        window.addEventListener('orientationchange', fixOverlayCenter);
-        fixOverlayCenter();
-        setTimeout(fixOverlayCenter, 500); // Fallback antisipasi lag iframe render
     </script>
 
 </body>
