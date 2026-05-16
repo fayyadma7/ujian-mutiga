@@ -2637,6 +2637,33 @@
                         pelanggaran: p_count
                     }).eq('id', window.idRowUjian);
                 } else {
+                    // Cek jika ada sisa data di local storage tapi di database tidak ada (berarti baru saja di-reset admin)
+                    const idUserLocal = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
+                    const adaLocalProgress = localStorage.getItem("asas_" + idUserLocal) || localStorage.getItem("waktu_mulai_" + idUserLocal);
+                    if (adaLocalProgress) {
+                        localStorage.removeItem("asas_" + idUserLocal);
+                        localStorage.removeItem("waktu_mulai_" + idUserLocal);
+                        localStorage.removeItem("pelanggaran_" + idUserLocal);
+                        localStorage.removeItem("urutan_" + idUserLocal);
+                        localStorage.removeItem("durasi_" + idUserLocal);
+                        // Reset variabel lokal
+                        p_count = 0; 
+                        
+                        // Notifikasi ke siswa
+                        await Swal.fire({
+                            title: 'Sesi Ujian Direset!',
+                            html: '<span style="font-size: 15px; color: #475569;">Sesi ujian Anda telah dihapus/direset oleh Pengawas. Anda harus mengerjakan ulang dari nomor pertama. Waktu Anda juga telah diatur ulang dari awal.</span>',
+                            icon: 'info',
+                            confirmButtonColor: '#3b82f6',
+                            confirmButtonText: 'Baik, Mengerti',
+                            customClass: {
+                                popup: 'modern-swal-popup',
+                                title: 'modern-swal-title',
+                                confirmButton: 'modern-swal-btn'
+                            }
+                        });
+                    }
+
                     const { data: inserted } = await db.from('jawaban_ujian').insert([{
                         created_at: new Date().toISOString(),
                         nama: n, kelas: k, mapel: m,
