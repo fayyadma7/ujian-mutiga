@@ -11,6 +11,8 @@
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap"
         rel="stylesheet">
     <link rel="icon" type="image/png" href="assets/logo-mute.png">
+    <!-- SweetAlert2 untuk popup notifikasi modern -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -1850,24 +1852,81 @@
         body:not(.anim-started) .particle {
             animation-play-state: paused !important;
         }
+
+        /* ===== SWEETALERT2 - DARK THEME (sesuai tema website ujian) ===== */
         .modern-swal-popup {
-            border-radius: 16px !important;
-            padding: 24px !important;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+            border-radius: 20px !important;
+            padding: 32px 28px !important;
+            background: rgba(10, 18, 40, 0.92) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 179, 237, 0.08) !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
         }
 
         .modern-swal-title {
-            font-size: 22px !important;
+            font-size: 20px !important;
             font-weight: 700 !important;
-            color: #1e293b !important;
+            color: #f1f5f9 !important;
+            letter-spacing: -0.3px !important;
         }
 
+        /* Teks konten popup */
+        .modern-swal-popup .swal2-html-container span {
+            color: #94a3b8 !important;
+        }
+
+        /* Ikon INFO (biru) — untuk "Sesi Ujian Direset!" */
+        .modern-swal-popup .swal2-icon.swal2-info {
+            border-color: rgba(59, 130, 246, 0.4) !important;
+            color: #60a5fa !important;
+            background: rgba(59, 130, 246, 0.08) !important;
+        }
+        .modern-swal-popup .swal2-icon.swal2-info::before {
+            color: #60a5fa !important;
+        }
+
+        /* Ikon WARNING (amber) — untuk "Sesi Ujian Tidak Valid!" */
+        .modern-swal-popup .swal2-icon.swal2-warning {
+            border-color: rgba(245, 158, 11, 0.4) !important;
+            color: #fbbf24 !important;
+            background: rgba(245, 158, 11, 0.08) !important;
+        }
+        .modern-swal-popup .swal2-icon.swal2-warning::before {
+            color: #fbbf24 !important;
+        }
+
+        /* Ikon ERROR (merah) — untuk "Akses Ditolak!" & "Sesi Tidak Valid" */
+        .modern-swal-popup .swal2-icon.swal2-error {
+            border-color: rgba(239, 68, 68, 0.4) !important;
+            color: #f87171 !important;
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
+        .modern-swal-popup .swal2-icon.swal2-error [class^=swal2-x-mark-line] {
+            background-color: #f87171 !important;
+        }
+
+        /* Tombol konfirmasi */
         .modern-swal-btn {
-            border-radius: 8px !important;
-            padding: 10px 24px !important;
-            font-weight: 600 !important;
-            letter-spacing: 0.5px !important;
+            border-radius: 10px !important;
+            padding: 11px 28px !important;
+            font-weight: 700 !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-size: 14px !important;
+            letter-spacing: 0.4px !important;
             transition: all 0.2s ease !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+        }
+        .modern-swal-btn:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        /* Background overlay SweetAlert */
+        .swal2-backdrop-show {
+            background: rgba(2, 6, 23, 0.75) !important;
+            backdrop-filter: blur(4px) !important;
         }
     </style>
 </head>
@@ -1892,7 +1951,7 @@
             <button class="btn-modal-confirm"
                 style="width: 100%; padding: 16px; font-size: 16px; font-weight: 700; letter-spacing: 0.5px;"
                 onclick="masukAplikasi()">
-                Masuk Ujian Sekarang <span style="margin-left: 8px; font-size: 18px; line-height: 1;">&rarr;</span>
+                Masuk Mode Layar Penuh <span style="margin-left: 8px; font-size: 18px; line-height: 1;">&rarr;</span>
             </button>
         </div>
     </div>
@@ -2523,6 +2582,9 @@
             btnMulai.disabled = true;
             btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Memuat...`;
 
+            // Tutup modal konfirmasi lebih awal agar tidak bentrok dengan Swal notifikasi
+            tutupModal();
+
             // Force fullscreen
             const elem = document.documentElement;
             try {
@@ -2549,7 +2611,6 @@
             const keyDurasi = "durasi_" + idUser;
 
             const startHandler = async (data) => {
-                tutupModal();
 
                 const savedUrutan = localStorage.getItem(keyUrutan);
                 if (savedUrutan) {
@@ -2600,80 +2661,6 @@
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(updateTimer, 1000);
 
-                // Cek dulu apakah sudah ada baris untuk siswa ini (resume ujian)
-                const { data: existing } = await db.from('jawaban_ujian')
-                    .select('id, status').eq('nama', n).eq('kelas', k).eq('mapel', m)
-                    .not('status', 'like', 'SELESAI%').maybeSingle();
-
-                if (existing) {
-                    // Proteksi Login Ganda (Simultaneous Login Block)
-                    const idUserLocal = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
-                    const adaLocalProgress = localStorage.getItem("asas_" + idUserLocal) || localStorage.getItem("waktu_mulai_" + idUserLocal);
-                    
-                    // Jika di database statusnya masih berjalan (bukan selesai), 
-                    // tapi di perangkat ini TIDAK ADA history lokalnya, berarti ini perangkat BERBEDA!
-                    if (!adaLocalProgress) {
-                        Swal.fire({
-                            title: 'Akses Ditolak!',
-                            html: '<span style="font-size: 15px; color: #475569;">Akun ini sedang digunakan untuk ujian di perangkat/browser lain. Minta pengawas untuk <b>mereset</b> data Anda di Live Monitoring jika ingin mengulang.</span>',
-                            icon: 'error',
-                            confirmButtonColor: '#ef4444',
-                            confirmButtonText: 'Kembali',
-                            customClass: {
-                                popup: 'modern-swal-popup',
-                                title: 'modern-swal-title',
-                                confirmButton: 'modern-swal-btn'
-                            }
-                        });
-                        btnMulai.disabled = false;
-                        btnMulai.innerHTML = 'Mulai Ujian <i class="fas fa-arrow-right"></i>';
-                        return;
-                    }
-
-                    window.idRowUjian = existing.id;
-                    // Update status ke aktif jika resume
-                    await db.from('jawaban_ujian').update({
-                        status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID'),
-                        pelanggaran: p_count
-                    }).eq('id', window.idRowUjian);
-                } else {
-                    // Cek jika ada sisa data di local storage tapi di database tidak ada (berarti baru saja di-reset admin)
-                    const idUserLocal = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
-                    const adaLocalProgress = localStorage.getItem("asas_" + idUserLocal) || localStorage.getItem("waktu_mulai_" + idUserLocal);
-                    if (adaLocalProgress) {
-                        localStorage.removeItem("asas_" + idUserLocal);
-                        localStorage.removeItem("waktu_mulai_" + idUserLocal);
-                        localStorage.removeItem("pelanggaran_" + idUserLocal);
-                        localStorage.removeItem("urutan_" + idUserLocal);
-                        localStorage.removeItem("durasi_" + idUserLocal);
-                        // Reset variabel lokal
-                        p_count = 0; 
-                        
-                        // Notifikasi ke siswa
-                        await Swal.fire({
-                            title: 'Sesi Ujian Direset!',
-                            html: '<span style="font-size: 15px; color: #475569;">Sesi ujian Anda telah dihapus/direset oleh Pengawas. Anda harus mengerjakan ulang dari nomor pertama. Waktu Anda juga telah diatur ulang dari awal.</span>',
-                            icon: 'info',
-                            confirmButtonColor: '#3b82f6',
-                            confirmButtonText: 'Baik, Mengerti',
-                            customClass: {
-                                popup: 'modern-swal-popup',
-                                title: 'modern-swal-title',
-                                confirmButton: 'modern-swal-btn'
-                            }
-                        });
-                    }
-
-                    const { data: inserted } = await db.from('jawaban_ujian').insert([{
-                        created_at: new Date().toISOString(),
-                        nama: n, kelas: k, mapel: m,
-                        skor_pg: null, jawaban_essay: '',
-                        pelanggaran: p_count, durasi: '-',
-                        status: 'MEMULAI...'
-                    }]).select('id').single();
-                    if (inserted) window.idRowUjian = inserted.id;
-                }
-
                 // Setelah 15 detik, update status ke AKTIF
                 setTimeout(async () => {
                     if (window.idRowUjian && document.getElementById('formUjian').style.display === 'block') {
@@ -2712,6 +2699,77 @@
                 }, 60000);
             };
 
+            // === REGISTRASI SESI KE DATABASE (sebelum soal diambil) ===
+            // Ini memastikan window.idRowUjian selalu ada sebelum exam dimulai
+            const { data: existing } = await db.from('jawaban_ujian')
+                .select('id, status').eq('nama', n).eq('kelas', k).eq('mapel', m)
+                .not('status', 'like', 'SELESAI%').maybeSingle();
+
+            if (existing) {
+                // Proteksi Login Ganda
+                const idUserLocal = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
+                const adaLocalProgress = localStorage.getItem("sesi_aktif_" + idUserLocal) ||
+                    localStorage.getItem("asas_" + idUserLocal) ||
+                    localStorage.getItem("waktu_mulai_" + idUserLocal);
+                if (!adaLocalProgress) {
+                    Swal.fire({
+                        title: 'Akses Ditolak!',
+                        html: '<span style="font-size: 15px; color: #475569;">Akun ini sedang digunakan untuk ujian di perangkat/browser lain. Minta pengawas untuk <b>mereset</b> data Anda di Live Monitoring jika ingin mengulang.</span>',
+                        icon: 'error',
+                        confirmButtonColor: '#ef4444',
+                        confirmButtonText: 'Kembali',
+                        customClass: { popup: 'modern-swal-popup', title: 'modern-swal-title', confirmButton: 'modern-swal-btn' }
+                    });
+                    btnMulai.disabled = false;
+                    btnMulai.innerHTML = 'Mulai Ujian <i class="fas fa-arrow-right"></i>';
+                    return;
+                }
+                window.idRowUjian = existing.id;
+                localStorage.setItem("sesi_aktif_" + idUserLocal, "1");
+                await db.from('jawaban_ujian').update({
+                    status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID'),
+                    pelanggaran: p_count
+                }).eq('id', window.idRowUjian);
+            } else {
+                // Cek jika sesi ada di localStorage tapi sudah di-reset admin di DB
+                const idUserLocal = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
+                const adaLocalProgress = localStorage.getItem("sesi_aktif_" + idUserLocal) ||
+                    localStorage.getItem("asas_" + idUserLocal) ||
+                    localStorage.getItem("waktu_mulai_" + idUserLocal);
+                if (adaLocalProgress) {
+                    // Tampilkan notifikasi DULU, baru bersihkan localStorage
+                    await Swal.fire({
+                        title: 'Sesi Ujian Direset!',
+                        html: '<span style="font-size: 15px; color: #475569;">Sesi ujian Anda telah dihapus/direset oleh Pengawas. Anda harus mengerjakan ulang dari nomor pertama. Waktu Anda juga telah diatur ulang dari awal.</span>',
+                        icon: 'info',
+                        confirmButtonColor: '#3b82f6',
+                        confirmButtonText: 'Baik, Mengerti',
+                        customClass: { popup: 'modern-swal-popup', title: 'modern-swal-title', confirmButton: 'modern-swal-btn' }
+                    });
+                    // Bersihkan setelah siswa klik "Baik, Mengerti"
+                    localStorage.removeItem("sesi_aktif_" + idUserLocal);
+                    localStorage.removeItem("asas_" + idUserLocal);
+                    localStorage.removeItem("waktu_mulai_" + idUserLocal);
+                    localStorage.removeItem("pelanggaran_" + idUserLocal);
+                    localStorage.removeItem("urutan_" + idUserLocal);
+                    localStorage.removeItem("durasi_" + idUserLocal);
+                    p_count = 0;
+                }
+                // Buat sesi baru
+                const { data: inserted } = await db.from('jawaban_ujian').insert([{
+                    created_at: new Date().toISOString(),
+                    nama: n, kelas: k, mapel: m,
+                    skor_pg: null, jawaban_essay: '',
+                    pelanggaran: p_count, durasi: '-',
+                    status: 'MEMULAI...'
+                }]).select('id').single();
+                if (inserted) {
+                    window.idRowUjian = inserted.id;
+                    localStorage.setItem("sesi_aktif_" + idUserLocal, "1");
+                }
+            }
+
+            // === AMBIL SOAL (idRowUjian sudah pasti ada di sini) ===
             let attemptGet = 0;
             const maxAttemptsGet = 5;
 
@@ -2724,22 +2782,17 @@
                 db.from('bank_soal').select('id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, tipe_soal').eq('mapel', m).order('id', { ascending: true })
                     .then(({ data, error }) => {
                         if (error) throw error;
-
-                        // Mapping kolom Supabase ke format array yang dipakai renderSoal:
-                        let formattedData = data.map((row) => {
-                            return [
-                                row.pertanyaan || "",    // s[0] = teks soal
-                                row.opsi_a || "",        // s[1] = Opsi A
-                                row.opsi_b || "",        // s[2] = Opsi B
-                                row.opsi_c || "",        // s[3] = Opsi C
-                                row.opsi_d || "",        // s[4] = Opsi D
-                                row.opsi_e || "",        // s[5] = Opsi E
-                                row.id,                  // s[6] = ID Soal (PENTING untuk RPC)
-                                "",                      // s[7] = Kunci Jawaban (DIHAPUS, aman dari inspect element!)
-                                row.tipe_soal || "PG"    // s[8] = Tipe Soal
-                            ];
-                        });
-
+                        let formattedData = data.map((row) => [
+                            row.pertanyaan || "",
+                            row.opsi_a || "",
+                            row.opsi_b || "",
+                            row.opsi_c || "",
+                            row.opsi_d || "",
+                            row.opsi_e || "",
+                            row.id,
+                            "",
+                            row.tipe_soal || "PG"
+                        ]);
                         if (formattedData.length > 0) {
                             startHandler(formattedData);
                         } else {
@@ -3093,6 +3146,7 @@
 
             const successHandler = () => {
                 const idUser = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
+                localStorage.removeItem("sesi_aktif_" + idUser);
                 localStorage.removeItem("asas_" + idUser);
                 localStorage.removeItem("waktu_mulai_" + idUser);
                 localStorage.removeItem("pelanggaran_" + idUser);
@@ -3121,7 +3175,7 @@
             let attemptSubmit = 0;
             const maxAttemptsSubmit = 5;
 
-            const sendSubmitRequest = () => {
+            const sendSubmitRequest = async () => {
                 attemptSubmit++;
                 if (attemptSubmit > 1) {
                     btnSelesai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptSubmit}/${maxAttemptsSubmit})...`;
@@ -3139,6 +3193,30 @@
 
                 const statusSelesai = "SELESAI - " + new Date().toLocaleTimeString('id-ID');
 
+                // 1.5 VALIDASI: CEK APAKAH SESI MASIH VALID (BELUM DI-RESET ADMIN)
+                if (window.idRowUjian) {
+                    const { data: cekSesi } = await db.from('jawaban_ujian')
+                        .select('id').eq('id', window.idRowUjian).maybeSingle();
+                    if (!cekSesi) {
+                        document.getElementById('overlaySubmit').style.display = 'none';
+                        btnSelesai.disabled = false;
+                        btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
+                        await Swal.fire({
+                            title: 'Sesi Ujian Tidak Valid!',
+                            html: '<span style="font-size: 15px; color: #475569;">Sesi ujian Anda telah direset/dihapus oleh Pengawas saat ujian berlangsung. Jawaban Anda tidak dapat dikirim. Silakan muat ulang halaman dan login kembali untuk mengulang ujian.</span>',
+                            icon: 'warning',
+                            confirmButtonColor: '#f59e0b',
+                            confirmButtonText: 'Muat Ulang Halaman',
+                            allowOutsideClick: false,
+                            customClass: { popup: 'modern-swal-popup', title: 'modern-swal-title', confirmButton: 'modern-swal-btn' }
+                        });
+                        const idUserReset = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
+                        ['sesi_aktif_', 'asas_', 'waktu_mulai_', 'pelanggaran_', 'urutan_', 'durasi_'].forEach(prefix => localStorage.removeItem(prefix + idUserReset));
+                        location.reload();
+                        return;
+                    }
+                }
+
                 // 2. PANGGIL FUNGSI KOREKSI DI DALAM DATABASE (SUPABASE RPC)
                 db.rpc('koreksi_dan_submit', {
                     p_id_row: window.idRowUjian || null,
@@ -3150,10 +3228,10 @@
                     p_durasi: dur,
                     p_status: statusSelesai
                 })
-                .then(({ error }) => {
-                    if (error) throw error;
-                    successHandler();
-                })
+                    .then(({ error }) => {
+                        if (error) throw error;
+                        successHandler();
+                    })
                     .catch(err => {
                         if (attemptSubmit < maxAttemptsSubmit) {
                             setTimeout(sendSubmitRequest, 2500);
