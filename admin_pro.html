@@ -1688,10 +1688,8 @@
                 const kelasSet = new Set();
                 allData.forEach(d => {
                     if (d.kelas) {
-                        let kString = d.kelas;
-                        if (kString.includes('::')) kString = kString.split('::')[1];
-                        kString.split(',').forEach(k => {
-                            if (k.trim()) kelasSet.add(k.trim().toUpperCase());
+                        d.kelas.split(',').forEach(k => {
+                            if (k.trim()) kelasSet.add(k.trim());
                         });
                     }
                     if (d.mapel) mapelSet.add(d.mapel.trim());
@@ -1706,7 +1704,9 @@
 
                 selectKelas.innerHTML = '<option value="">Semua Kelas</option>';
                 [...kelasSet].sort().forEach(k => {
-                    const opt = document.createElement('option'); opt.value = k; opt.textContent = k;
+                    const opt = document.createElement('option'); 
+                    opt.value = k; 
+                    opt.textContent = k.includes('::') ? k.split('::')[1] : k;
                     selectKelas.appendChild(opt);
                 });
                 selectKelas.value = filterKelas;
@@ -1731,7 +1731,7 @@
                         <td style="text-align:center;">${index + 1}</td>
                         <td style="font-weight: 500;">${siswa.nama}</td>
                         <td style="text-align:center;">
-                            <span class="badge" style="display:inline-block; margin-bottom:4px;">${siswa.kelas}</span><br>
+                            <span class="badge" style="display:inline-block; margin-bottom:4px;">${siswa.kelas.includes('::') ? siswa.kelas.split('::')[1] : siswa.kelas}</span><br>
                             <span style="font-size:12px; color:var(--text-muted); font-weight:600;">${siswa.mapel}</span>
                         </td>
                         <td style="text-align:center; font-weight: 700; color: var(--primary); font-size:16px;">${siswa.skor_pg !== null ? siswa.skor_pg : '-'}</td>
@@ -2134,7 +2134,8 @@
 
             selectKelas.innerHTML = '<option value="">Semua Kelas</option>';
             kelass.forEach(k => {
-                selectKelas.innerHTML += `<option value="${k}">${k}</option>`;
+                const textK = k.includes('::') ? k.split('::')[1] : k;
+                selectKelas.innerHTML += `<option value="${k}">${textK}</option>`;
             });
 
             selectMapel.value = curM;
@@ -3106,7 +3107,7 @@
             [...kelasSet].sort().forEach(k => {
                 const opt = document.createElement('option');
                 opt.value = k;
-                opt.textContent = k;
+                opt.textContent = k.includes('::') ? k.split('::')[1] : k;
                 selectKelas.appendChild(opt);
             });
             if ([...kelasSet].includes(prevKelas)) selectKelas.value = prevKelas;
@@ -3179,7 +3180,7 @@
                         <td style="text-align:center;">${i + 1}</td>
                         <td style="font-weight:600;">${s.nama}</td>
                         <td style="text-align:center;">
-                            <span class="badge" style="display:inline-block; margin-bottom:3px;">${s.kelas}</span><br>
+                            <span class="badge" style="display:inline-block; margin-bottom:3px;">${s.kelas.includes('::') ? s.kelas.split('::')[1] : s.kelas}</span><br>
                             <span style="font-size:12px; color:var(--text-muted); font-weight:600;">${s.mapel}</span>
                         </td>
                         <td style="text-align:center;">${statusBadge}</td>
