@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - SMK Muhammadiyah 3 Purbalingga</title>
+    <title>Admin Ujian Mutiga</title>
     <link rel="icon" href="https://raw.githubusercontent.com/fayyadma7/ujian-mutiga/main/assets/logo-mute.png?v=1">
     <link rel="shortcut icon"
         href="https://raw.githubusercontent.com/fayyadma7/ujian-mutiga/main/assets/logo-mute.png?v=1">
@@ -657,6 +657,110 @@
                 opacity: .5
             }
         }
+
+        /* Custom Confirm Modal */
+        #modalConfirmAdmin {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        #modalConfirmAdmin.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .admin-modal-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+            border: 1px solid #f1f5f9;
+        }
+
+        #modalConfirmAdmin.show .admin-modal-card {
+            transform: scale(1);
+        }
+
+        .admin-modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #fef2f2;
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 16px auto;
+            border: 6px solid #fff1f2;
+        }
+
+        .admin-modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .admin-modal-text {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .admin-modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .admin-modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-admin-cancel {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-admin-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-admin-confirm {
+            background: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-admin-confirm:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+        }
     </style>
 </head>
 
@@ -664,6 +768,19 @@
 
     <!-- Toast notifikasi real-time -->
     <div id="toast-container"></div>
+
+    <!-- Modal Konfirmasi Hapus -->
+    <div id="modalConfirmAdmin">
+        <div class="admin-modal-card">
+            <div class="admin-modal-icon"><i class="fas fa-trash-alt"></i></div>
+            <div class="admin-modal-title" id="admin-confirm-title">Konfirmasi</div>
+            <div class="admin-modal-text" id="admin-confirm-text">Apakah Anda yakin?</div>
+            <div class="admin-modal-actions">
+                <button class="btn-admin-cancel" id="admin-confirm-btn-cancel">Batal</button>
+                <button class="btn-admin-confirm" id="admin-confirm-btn-yes">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
 
     <!-- SIDEBAR -->
     <nav class="sidebar">
@@ -824,32 +941,66 @@
                     <div id="status-upload" style="margin-top: 15px; font-weight: 500; text-align: center;"></div>
                 </div>
 
-                <!-- PANEL PREVIEW SOAL -->
-                <div class="card-panel">
+                <!-- PANEL BANK SOAL (TABEL MAPEL) -->
+                <div class="card-panel" id="panel-daftar-mapel">
                     <div class="panel-header">
-                        <h3 class="panel-title">Preview Isi Bank Soal</h3>
+                        <h3 class="panel-title">Daftar Bank Soal (Mata Pelajaran)</h3>
                         <div style="display:flex; gap:10px; align-items:center;">
-                            <button class="btn btn-outline"
-                                style="color:var(--danger); border-color:#fecaca; padding:6px 10px;"
-                                onclick="bulkActionSoal('delete')" title="Hapus soal yang diceklis"><i
-                                    class="fas fa-trash-alt"></i></button>
-                            <div style="display:flex; flex-direction:column; gap:8px;">
-                                <select id="preview-mapel" class="form-control"
-                                    style="width:200px; padding:6px 10px; font-size:13px;" onchange="loadPreviewSoal()">
-                                    <option value="">— Pilih Mapel —</option>
-                                </select>
-                                <input type="text" id="search-soal" class="form-control" placeholder="Cari teks soal..."
-                                    style="padding:6px 10px; font-size:12px;" onkeyup="filterPreviewSoal()">
-                            </div>
-                            <button class="btn btn-outline" onclick="loadPreviewSoal()"><i class="fas fa-sync-alt"></i>
-                                Refresh</button>
+                            <button class="btn" style="background:#fef2f2; color:#ef4444; border:1px solid #fee2e2;"
+                                onclick="bulkActionMapel('delete')">
+                                <i class="fas fa-trash-alt"></i> Hapus Terpilih
+                            </button>
+                            <button class="btn btn-outline" onclick="populatePreviewMapel()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
                         </div>
                     </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;"><input type="checkbox" id="select-all-mapel"
+                                            onchange="toggleSelectAll('mapel')"></th>
+                                    <th style="text-align:left; padding-left:15px;">MATA PELAJARAN</th>
+                                    <th style="text-align:center;">JUMLAH SOAL</th>
+                                    <th style="text-align:center;">OPSI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabel-daftar-mapel">
+                                <tr>
+                                    <td colspan="4" style="text-align:center;">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PANEL PREVIEW SOAL DETAIL (HIDDEN BY DEFAULT) -->
+                <div class="card-panel" id="panel-detail-soal" style="display:none;">
+                    <div class="panel-header" style="flex-wrap: wrap; gap:10px;">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <h3 class="panel-title">Preview Soal</h3>
+                            <span id="detail-mapel-title"
+                                style="font-size:13px; color:var(--primary); font-weight:600;"></span>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-outline"
+                                style="color:#64748b; border-color:#e2e8f0; padding:6px 12px; font-size:13px;"
+                                onclick="tutupDetailSoal()">
+                                <i class="fas fa-arrow-left"></i> Kembali
+                            </button>
+                            <button class="btn btn-outline"
+                                style="color:var(--danger); border-color:#fecaca; padding:6px 12px; font-size:13px;"
+                                onclick="bulkActionSoal('delete')" title="Hapus soal yang diceklis">
+                                <i class="fas fa-trash-alt"></i> Hapus Soal Terpilih
+                            </button>
+                            <input type="text" id="search-soal" class="form-control" placeholder="Cari teks soal..."
+                                style="width:180px; padding:6px 10px; font-size:12px;" onkeyup="filterPreviewSoal()">
+                        </div>
+                    </div>
+                    <input type="hidden" id="preview-mapel" value="">
                     <div id="preview-container"
                         style="max-height: 500px; overflow-y: auto; padding: 15px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px;">
-                        <div style="text-align:center; padding:30px; color:var(--text-muted);">
-                            Pilih Mata Pelajaran di atas untuk melihat preview soal.
-                        </div>
                     </div>
                 </div>
             </section>
@@ -940,8 +1091,15 @@
                     <div class="card-panel" style="overflow-x: auto;">
                         <div class="panel-header">
                             <h3 class="panel-title">Daftar Jadwal Ujian</h3>
-                            <button class="btn btn-outline" onclick="loadJadwal()"><i class="fas fa-sync-alt"></i>
-                                Refresh</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn" style="background:#fef2f2; color:#ef4444; border:1px solid #fee2e2;"
+                                    onclick="bulkActionJadwal('delete')">
+                                    <i class="fas fa-trash-alt"></i> Hapus Terpilih
+                                </button>
+                                <button class="btn btn-outline" onclick="loadJadwal()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
                         </div>
                         <table>
                             <thead>
@@ -1069,10 +1227,10 @@
                                 <th style="width:40px; text-align:center;"><input type="checkbox"
                                         id="select-all-laporan" onchange="toggleSelectAll('laporan')"></th>
                                 <th style="text-align:center;">No</th>
-                                <th>Nama Siswa</th>
+                                <th style="text-align:left;">Nama Siswa</th>
                                 <th style="text-align:center;">Kls/Mapel</th>
                                 <th style="text-align:center;">Skor PG</th>
-                                <th style="text-align:center;">Durasi/Pelanggaran</th>
+                                <th style="text-align:center;">Durasi & Pelanggaran</th>
                                 <th style="text-align:center;">Status</th>
                                 <th style="text-align:center;">Aksi</th>
                             </tr>
@@ -1230,6 +1388,10 @@
                 // Isi dropdown filter lalu muat tabel — subscription sudah berjalan global
                 populateFilterKelas().then(() => loadMonitoring());
             }
+
+            // Cek ulang jadwal kedaluwarsa setiap kali pindah tab
+            // Mencegah timer ter-throttle saat tab di-background
+            scheduleNextAutoDeactivate();
         }
 
         // --- 3. LOGIC AMBIL DATA DARI DATABASE (READ) ---
@@ -1309,7 +1471,7 @@
                             <span style="font-size:12px; font-weight:600; color:${siswa.pelanggaran > 0 ? '#ef4444' : '#10b981'};"><i class="fas fa-exclamation-triangle"></i> ${siswa.pelanggaran || 0} Pelanggaran</span>
                         </td>
                         <td style="text-align:center;">
-                            <span class="badge" style="background:${String(siswa.status).includes('PELANGGARAN') ? '#fee2e2' : '#d1fae5'}; color:${String(siswa.status).includes('PELANGGARAN') ? '#ef4444' : '#065f46'}; border:none;">
+                            <span class="badge" style="background:${String(siswa.status).includes('PELANGGARAN') ? '#fee2e2' : '#d1fae5'}; color:${String(siswa.status).includes('PELANGGARAN') ? '#ef4444' : '#065f46'}; border:none; white-space:nowrap; display:inline-block; font-size:11px; letter-spacing:0.3px;">
                                 ${siswa.status || 'SELESAI'}
                             </span>
                         </td>
@@ -1406,12 +1568,40 @@
         }
 
         async function hapusSatuSoal(id) {
-            if (!confirm("Yakin ingin menghapus satu soal ini secara permanen?")) return;
+            if (!await asyncConfirm("Yakin ingin menghapus satu soal ini secara permanen?", "Hapus Soal?")) return;
             const { error } = await db.from('bank_soal').delete().eq('id', id);
             if (error) showToast("Gagal menghapus: " + error.message, 'error');
             else {
                 showToast("Soal berhasil dihapus", 'success');
                 loadPreviewSoal();
+            }
+        }
+
+        async function hapusSatuMapel(mapel) {
+            if (!await asyncConfirm(`Hapus <b>SEMUA SOAL</b> untuk mata pelajaran <b>"${mapel}"</b>?<br>Tindakan ini menghapus seluruh data bank soal untuk mapel ini.`, "Hapus Seluruh Mapel?")) return;
+
+            const { error } = await db.from('bank_soal').delete().eq('mapel', mapel);
+            if (error) {
+                showToast("Gagal menghapus mapel: " + error.message, 'error');
+            } else {
+                showToast(`Seluruh soal untuk mapel "${mapel}" berhasil dihapus`, 'success');
+                populatePreviewMapel();
+            }
+        }
+
+        async function bulkActionMapel(action) {
+            const mapels = Array.from(document.querySelectorAll('.cb-mapel:checked')).map(cb => cb.value);
+            if (mapels.length === 0) return showToast("Pilih minimal satu mata pelajaran!", 'info');
+
+            if (action === 'delete') {
+                if (!await asyncConfirm(`Hapus <b>${mapels.length} mata pelajaran</b> terpilih beserta seluruh soalnya?<br>Tindakan ini tidak bisa dibatalkan.`, "Hapus Bank Soal?")) return;
+
+                const { error } = await db.from('bank_soal').delete().in('mapel', mapels);
+                if (error) showToast("Gagal menghapus: " + error.message, 'error');
+                else {
+                    showToast(`${mapels.length} mata pelajaran berhasil dihapus`, 'success');
+                    populatePreviewMapel();
+                }
             }
         }
 
@@ -1431,10 +1621,15 @@
                     item.style.display = 'block';
                 } else if (textOnly.includes(query)) {
                     item.style.display = 'block';
-                    // Highlight logic: Replace text outside tags
-                    const regex = new RegExp(`(${query})`, 'gi');
-                    // Kita gunakan innerText untuk pencocokan yang bersih, tapi innerHTML untuk display
-                    // Untuk highlight pro, kita ganti teksnya saja
+
+                    // Escape query for regex
+                    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const safeQuery = escapeRegExp(query);
+
+                    // Regex: Match kata tapi JANGAN match jika dia berada di dalam tag <...>
+                    // (?![^<]*>) memastikan kata tidak diikuti oleh '>' tanpa ada '<' di antaranya
+                    const regex = new RegExp(`(${safeQuery})(?![^<]*>)`, 'gi');
+
                     teksDiv.innerHTML = originalHtml.replace(regex, '<mark style="background:#fef08a; color:#854d0e; padding:0 2px; border-radius:2px;">$1</mark>');
                 } else {
                     item.style.display = 'none';
@@ -1443,7 +1638,7 @@
         }
 
         async function hapusDataNilai(id, nama) {
-            if (!confirm(`Hapus data nilai siswa "${nama}"? Siswa ini nantinya bisa login ulang untuk ujian kembali.`)) return;
+            if (!await asyncConfirm(`Hapus data nilai siswa "${nama}"?<br>Siswa ini nantinya bisa login ulang untuk ujian kembali.`, "Hapus Data Nilai?")) return;
             const { error } = await db.from('jawaban_ujian').delete().eq('id', id);
             if (error) showToast("Gagal menghapus: " + error.message, 'error');
             else {
@@ -1455,7 +1650,7 @@
         // --- BATCH ACTIONS ---
         function toggleSelectAll(type) {
             const isChecked = document.getElementById('select-all-' + type).checked;
-            const selector = type === 'jadwal' ? '.cb-jadwal' : (type === 'laporan' ? '.cb-laporan' : '.cb-soal');
+            const selector = type === 'jadwal' ? '.cb-jadwal' : (type === 'laporan' ? '.cb-laporan' : (type === 'mapel' ? '.cb-mapel' : '.cb-soal'));
             document.querySelectorAll(selector).forEach(cb => cb.checked = isChecked);
         }
 
@@ -1464,7 +1659,7 @@
             if (ids.length === 0) return showToast("Pilih minimal satu jadwal!", 'info');
 
             if (action === 'delete') {
-                if (!confirm(`Hapus ${ids.length} jadwal terpilih?`)) return;
+                if (!await asyncConfirm(`Hapus <b>${ids.length} jadwal</b> terpilih?<br>Tindakan ini tidak bisa dibatalkan.`, "Hapus Jadwal?")) return;
                 await db.from('jadwal_ujian').delete().in('id', ids);
                 showToast(`${ids.length} jadwal berhasil dihapus`, 'success');
             } else {
@@ -1478,7 +1673,7 @@
         async function bulkActionSoal(action) {
             const ids = Array.from(document.querySelectorAll('.cb-soal:checked')).map(cb => cb.value);
             if (ids.length === 0) return showToast("Pilih minimal satu soal!", 'info');
-            if (!confirm(`Hapus ${ids.length} soal terpilih?`)) return;
+            if (!await asyncConfirm(`Hapus <b>${ids.length} soal</b> terpilih secara permanen?`, "Hapus Bank Soal?")) return;
             await db.from('bank_soal').delete().in('id', ids);
             showToast(`${ids.length} soal berhasil dihapus`, 'success');
             loadPreviewSoal();
@@ -1487,7 +1682,7 @@
         async function bulkActionLaporan(action) {
             const ids = Array.from(document.querySelectorAll('.cb-laporan:checked')).map(cb => cb.value);
             if (ids.length === 0) return showToast("Pilih minimal satu data!", 'info');
-            if (!confirm(`Hapus ${ids.length} data nilai terpilih?`)) return;
+            if (!await asyncConfirm(`Hapus <b>${ids.length} data nilai</b> terpilih?`, "Hapus Nilai Siswa?")) return;
             await db.from('jawaban_ujian').delete().in('id', ids);
             showToast(`${ids.length} data nilai berhasil dihapus`, 'success');
             loadNilaiSiswa();
@@ -2003,8 +2198,6 @@
 
                         // Auto-update & tampilkan di Preview Soal
                         await populatePreviewMapel();
-                        document.getElementById('preview-mapel').value = mapel;
-                        loadPreviewSoal();
                     })
                     .catch(function (err) {
                         console.error(err);
@@ -2016,22 +2209,80 @@
 
         // --- 5C. PREVIEW SOAL ---
         async function populatePreviewMapel() {
-            const select = document.getElementById('preview-mapel');
-            const prevVal = select.value;
+            const tbody = document.getElementById('tabel-daftar-mapel');
+            if (!tbody) return; // Prevent error if not on that page yet
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>';
+
             const { data, error } = await db.from('bank_soal').select('mapel');
-            if (error || !data) return;
+            if (error || !data) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">Gagal memuat data: ${error?.message}</td></tr>`;
+                return;
+            }
 
-            const mapelSet = new Set();
-            data.forEach(d => { if (d.mapel) mapelSet.add(d.mapel.trim()); });
-
-            select.innerHTML = '<option value="">— Pilih Mapel —</option>';
-            [...mapelSet].sort().forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = m;
-                select.appendChild(opt);
+            const mapelCounts = {};
+            data.forEach(row => {
+                if (row.mapel) mapelCounts[row.mapel] = (mapelCounts[row.mapel] || 0) + 1;
             });
-            if ([...mapelSet].includes(prevVal)) select.value = prevVal;
+
+            const uniqueMapels = Object.keys(mapelCounts).sort();
+
+            if (uniqueMapels.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">Belum ada bank soal. Silakan upload soal via Excel atau Word.</td></tr>';
+
+                // Update dropdown jadwal juga kalau kosong
+                const optMapel = document.getElementById('jadwal-mapel');
+                if (optMapel) optMapel.innerHTML = '<option value="">— Belum ada Mapel di Bank Soal —</option>';
+                return;
+            }
+
+            let html = '';
+            let optHtml = '<option value="">— Pilih Mapel dari Bank Soal —</option>';
+            uniqueMapels.forEach(mapel => {
+                const count = mapelCounts[mapel];
+                html += `
+                    <tr>
+                        <td style="text-align:center;"><input type="checkbox" class="cb-mapel" value="${mapel}"></td>
+                        <td style="font-weight:600; color:var(--text-dark); text-align:left; padding-left:15px;">${mapel}</td>
+                        <td style="text-align:center;"><span class="badge" style="background:#e0e7ff; color:var(--primary);">${count} Soal</span></td>
+                        <td style="text-align:center;">
+                            <div class="action-buttons" style="display:flex; justify-content:center; gap:8px;">
+                                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="bukaDetailSoal('${mapel}')">
+                                    <i class="fas fa-eye"></i> Lihat Soal
+                                </button>
+                                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: #ef4444; border-color: #fecaca;" onclick="hapusSatuMapel('${mapel}')">
+                                    <i class="fas fa-trash-alt"></i> Hapus
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                optHtml += `<option value="${mapel}">${mapel}</option>`;
+            });
+            tbody.innerHTML = html;
+
+            // Update dropdown di tab "Buat Jadwal"
+            const optMapel = document.getElementById('jadwal-mapel');
+            if (optMapel) {
+                const currentVal = optMapel.value;
+                optMapel.innerHTML = optHtml;
+                if (uniqueMapels.includes(currentVal)) optMapel.value = currentVal;
+            }
+        }
+
+        function bukaDetailSoal(mapel) {
+            document.getElementById('panel-daftar-mapel').style.display = 'none';
+            document.getElementById('panel-detail-soal').style.display = 'block';
+            document.getElementById('detail-mapel-title').innerText = "Mata Pelajaran: " + mapel;
+            document.getElementById('preview-mapel').value = mapel;
+            loadPreviewSoal();
+        }
+
+        function tutupDetailSoal() {
+            document.getElementById('panel-detail-soal').style.display = 'none';
+            document.getElementById('panel-daftar-mapel').style.display = 'block';
+            document.getElementById('preview-container').innerHTML = '';
+            document.getElementById('preview-mapel').value = '';
+            populatePreviewMapel();
         }
 
         async function loadPreviewSoal() {
@@ -2316,18 +2567,8 @@
                 }
             });
 
-            // === AUTO-NONAKTIF: Update is_aktif=false untuk jadwal yang sudah berakhir ===
-            if (idsToAutoDeactivate.length > 0) {
-                await db.from('jadwal_ujian')
-                    .update({ is_aktif: false })
-                    .in('id', idsToAutoDeactivate);
-                showToast(
-                    `${idsToAutoDeactivate.length} jadwal dinonaktifkan otomatis karena waktu pelaksanaan sudah berakhir.`,
-                    'info'
-                );
-                loadJadwal(); // Reload agar toggle UI ikut terupdate
-                return;
-            }
+            // Jika ada yang perlu di-nonaktifkan, biarkan checkAndAutoDeactivateJadwal() yang menangani
+            // (fungsi global itu yang akan memanggil loadJadwal() dan showToast())
 
             // Jadwalkan auto-refresh tabel persis saat kejadian terdekat (tambah 500ms safety gap)
             if (nextRefreshTime !== Infinity) {
@@ -2353,7 +2594,7 @@
         }
 
         async function hapusJadwal(id, mapel) {
-            if (!confirm(`Hapus jadwal "${mapel}" ? Tindakan ini tidak bisa dibatalkan.`)) return;
+            if (!await asyncConfirm(`Hapus jadwal <b>"${mapel}"</b>?<br>Tindakan ini tidak bisa dibatalkan.`, "Hapus Jadwal?")) return;
             const { error } = await db.from('jadwal_ujian').delete().eq('id', id);
             if (error) showToast('Gagal menghapus: ' + error.message, 'error');
             else {
@@ -2499,6 +2740,32 @@
             });
         }
 
+        // --- Custom Confirm Modal (Async) ---
+        function asyncConfirm(pesan, judul = 'Konfirmasi') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('modalConfirmAdmin');
+                document.getElementById('admin-confirm-title').innerHTML = judul;
+                document.getElementById('admin-confirm-text').innerHTML = pesan;
+
+                const btnYes = document.getElementById('admin-confirm-btn-yes');
+                const btnCancel = document.getElementById('admin-confirm-btn-cancel');
+
+                const cleanup = () => {
+                    modal.classList.remove('show');
+                    btnYes.onclick = null;
+                    btnCancel.onclick = null;
+                };
+
+                btnYes.onclick = () => { cleanup(); resolve(true); };
+                btnCancel.onclick = () => { cleanup(); resolve(false); };
+
+                modal.classList.add('show');
+            });
+        }
+
+        // Variabel global untuk melacak jumlah pelanggaran tiap siswa secara lokal
+        const violationTracker = new Map();
+
         function startRealtimeMonitoring() {
             if (monitoringChannel) { db.removeChannel(monitoringChannel); monitoringChannel = null; }
 
@@ -2511,14 +2778,14 @@
                         const prev = payload.old || {};
                         const ev = payload.eventType;
 
-                        if (ev === 'INSERT') {
-                            showToast(`🟢 ${s.nama} (${s.kelas}) mulai mengerjakan`, 'aktif');
-                        } else if (ev === 'UPDATE') {
-                            if ((s.pelanggaran || 0) > (prev.pelanggaran || 0)) {
-                                showToast(`⚠️ Pelanggaran! ${s.nama} (${s.kelas}) — ${s.pelanggaran}x`, 'plg');
-                            }
-                            if (String(s.status).startsWith('SELESAI') && !String(prev.status || '').startsWith('SELESAI')) {
-                                showToast(`✅ ${s.nama} (${s.kelas}) selesai mengerjakan`, 'selesai');
+                        if (ev === 'UPDATE') {
+                            // Cek pelanggaran menggunakan state tracker lokal
+                            const currentPlg = parseInt(s.pelanggaran) || 0;
+                            const prevPlg = violationTracker.get(s.id) || 0;
+
+                            if (currentPlg > prevPlg) {
+                                showToast(`Pelanggaran! ${s.nama} (${s.kelas}) — ${currentPlg}x`, 'plg');
+                                violationTracker.set(s.id, currentPlg);
                             }
                         }
                         // Reload tabel monitoring HANYA jika halaman monitoring sedang aktif
@@ -2606,8 +2873,7 @@
 
                 if (!adaUjianAktif) {
                     banner.style.display = 'flex';
-                    banner.innerHTML = '<i class="fas fa-info-circle"></i>&nbsp; Tidak ada ujian yang aktif — Live monitoring dihentikan otomatis.';
-                    stopMonitoring();
+                    banner.innerHTML = '<i class="fas fa-info-circle"></i>&nbsp; Tidak ada ujian yang aktif saat ini.';
                 }
                 return;
             }
@@ -2656,8 +2922,7 @@
             // --- Auto-stop: Semua selesai DAN tidak ada jadwal aktif ---
             if (cntAktif === 0 && !adaUjianAktif) {
                 banner.style.display = 'flex';
-                banner.innerHTML = '<i class="fas fa-check-circle"></i>&nbsp; Semua siswa sudah selesai & tidak ada ujian aktif — Live monitoring dihentikan otomatis.';
-                stopMonitoring();
+                banner.innerHTML = '<i class="fas fa-check-circle"></i>&nbsp; Semua siswa sudah selesai & tidak ada ujian yang sedang berlangsung.';
             } else {
                 banner.style.display = 'none';
             }
@@ -2678,6 +2943,96 @@
         }
         setInterval(updateJam, 1000);
         updateJam();
+
+        // --- 9. AUTO-DEACTIVATE JADWAL (GLOBAL — BERJALAN DI SEMUA TAB) ---
+        // Timer cerdas: hanya aktif tepat saat ada jadwal yang akan berakhir.
+        // Tidak ada polling buta — setTimeout dijadwalkan persis di waktu selesai jadwal terdekat.
+        let _autoDeactivateTimer = null;
+
+        async function scheduleNextAutoDeactivate() {
+            // Bersihkan timer sebelumnya jika ada
+            if (_autoDeactivateTimer) {
+                clearTimeout(_autoDeactivateTimer);
+                _autoDeactivateTimer = null;
+            }
+
+            try {
+                const { data, error } = await db
+                    .from('jadwal_ujian')
+                    .select('id, mapel, waktu_selesai, durasi_menit, waktu_mulai, is_aktif')
+                    .eq('is_aktif', true);
+
+                if (error || !data || data.length === 0) return;
+
+                const now = new Date();
+                const idsToDeactivate = [];
+                const mapelToDeactivate = [];
+                let nextEndTime = Infinity;
+
+                data.forEach(j => {
+                    const tMulai = j.waktu_mulai ? new Date(j.waktu_mulai) : null;
+                    let tSelesai = j.waktu_selesai ? new Date(j.waktu_selesai) : null;
+
+                    if (!tSelesai || isNaN(tSelesai.getTime())) {
+                        if (tMulai && !isNaN(tMulai.getTime())) {
+                            tSelesai = new Date(tMulai.getTime() + (j.durasi_menit || 90) * 60000);
+                        } else return;
+                    }
+
+                    if (now >= tSelesai) {
+                        // Jadwal ini sudah lewat — tandai untuk dinonaktifkan
+                        idsToDeactivate.push(j.id);
+                        mapelToDeactivate.push(j.mapel);
+                    } else {
+                        // Jadwal belum selesai — catat waktu selesai terdekat
+                        if (tSelesai.getTime() < nextEndTime) {
+                            nextEndTime = tSelesai.getTime();
+                        }
+                    }
+                });
+
+                // Nonaktifkan yang sudah berakhir
+                if (idsToDeactivate.length > 0) {
+                    const { error: updateError } = await db
+                        .from('jadwal_ujian')
+                        .update({ is_aktif: false })
+                        .in('id', idsToDeactivate);
+
+                    if (!updateError) {
+                        // Tampilkan notifikasi — muncul di TAB MANA SAJA
+                        const mapelList = mapelToDeactivate.slice(0, 2).join(', ');
+                        const sisanya = mapelToDeactivate.length > 2 ? ` +${mapelToDeactivate.length - 2} lainnya` : '';
+                        showToast(
+                            `${idsToDeactivate.length} mapel dinonaktifkan otomatis: ${mapelList}${sisanya}`,
+                            'info'
+                        );
+
+                        // Jika tab Penjadwalan sedang aktif, reload tabelnya
+                        if (document.getElementById('jadwal') && document.getElementById('jadwal').classList.contains('active')) {
+                            loadJadwal();
+                        }
+
+                        // Perbarui juga stat dashboard
+                        updateDashboardStats();
+                        loadDashboardJadwalAktif();
+                    }
+                }
+
+                // Jadwalkan timer berikutnya tepat saat jadwal aktif terdekat berakhir
+                if (nextEndTime !== Infinity) {
+                    const delayMs = Math.max(1000, nextEndTime - Date.now() + 500); // +500ms safety gap
+                    console.log(`[AutoDeactivate] Timer berikutnya: ${Math.round(delayMs / 1000)}s lagi`);
+                    _autoDeactivateTimer = setTimeout(scheduleNextAutoDeactivate, delayMs);
+                }
+                // Jika tidak ada jadwal aktif yang tersisa → tidak ada timer dipasang (hemat resource)
+
+            } catch (err) {
+                console.warn('[AutoDeactivate] Error:', err);
+            }
+        }
+
+        // Jalankan pertama kali saat halaman dibuka
+        scheduleNextAutoDeactivate();
 
         // Load data pertama kali aplikasi dibuka
         loadNilaiSiswa();
