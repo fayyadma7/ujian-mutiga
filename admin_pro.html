@@ -2436,6 +2436,8 @@
             document.getElementById('jadwal-selesai').value = '';
             document.getElementById('jadwal-durasi').value = '';
             loadJadwal();
+            // Jadwalkan ulang timer agar jadwal yang baru disimpan ikut dimonitor
+            scheduleNextAutoDeactivate();
         }
 
         async function loadJadwal() {
@@ -2945,12 +2947,11 @@
         updateJam();
 
         // --- 9. AUTO-DEACTIVATE JADWAL (GLOBAL — BERJALAN DI SEMUA TAB) ---
-        // Timer cerdas: hanya aktif tepat saat ada jadwal yang akan berakhir.
-        // Tidak ada polling buta — setTimeout dijadwalkan persis di waktu selesai jadwal terdekat.
         let _autoDeactivateTimer = null;
+        let _watchedJadwal = []; // Cache: jadwal aktif yang sedang dimonitor {id, mapel, endTime}
+        const _deactivatingIds = new Set(); // Dedup: ID yang sedang dalam proses deactivate
 
         async function scheduleNextAutoDeactivate() {
-            // Bersihkan timer sebelumnya jika ada
             if (_autoDeactivateTimer) {
                 clearTimeout(_autoDeactivateTimer);
                 _autoDeactivateTimer = null;
@@ -2959,14 +2960,14 @@
             try {
                 const { data, error } = await db
                     .from('jadwal_ujian')
-                    .select('id, mapel, waktu_selesai, durasi_menit, waktu_mulai, is_aktif')
-                    .eq('is_aktif', true);
+                    .select('id, mapel, waktu_selesai, durasi_menit, waktu_mulai, is_aktif');
 
-                if (error || !data || data.length === 0) return;
+                if (error || !data) return;
 
                 const now = new Date();
                 const idsToDeactivate = [];
                 const mapelToDeactivate = [];
+                _watchedJadwal = []; // Reset cache
                 let nextEndTime = Infinity;
 
                 data.forEach(j => {
@@ -2979,60 +2980,116 @@
                         } else return;
                     }
 
-                    if (now >= tSelesai) {
-                        // Jadwal ini sudah lewat — tandai untuk dinonaktifkan
-                        idsToDeactivate.push(j.id);
-                        mapelToDeactivate.push(j.mapel);
-                    } else {
-                        // Jadwal belum selesai — catat waktu selesai terdekat
-                        if (tSelesai.getTime() < nextEndTime) {
-                            nextEndTime = tSelesai.getTime();
+                    if (j.is_aktif === true && now >= tSelesai) {
+                        // Sudah berakhir tapi masih aktif di DB — nonaktifkan
+                        if (!_deactivatingIds.has(j.id)) {
+                            _deactivatingIds.add(j.id);
+                            idsToDeactivate.push(j.id);
+                            mapelToDeactivate.push(j.mapel);
                         }
+                    } else if (j.is_aktif === true && now < tSelesai) {
+                        // Masih aktif & belum berakhir → pantau
+                        _watchedJadwal.push({ id: j.id, mapel: j.mapel, endTime: tSelesai.getTime() });
+                        if (tSelesai.getTime() < nextEndTime) nextEndTime = tSelesai.getTime();
                     }
                 });
 
-                // Nonaktifkan yang sudah berakhir
+                // Nonaktifkan semuanya sekaligus
                 if (idsToDeactivate.length > 0) {
                     const { error: updateError } = await db
                         .from('jadwal_ujian')
                         .update({ is_aktif: false })
                         .in('id', idsToDeactivate);
 
-                    if (!updateError) {
-                        // Tampilkan notifikasi — muncul di TAB MANA SAJA
+                    // Selalu hapus dari Set setelah proses (berhasil maupun gagal)
+                    idsToDeactivate.forEach(id => _deactivatingIds.delete(id));
+
+                    if (updateError) {
+                        console.error('[AutoDeactivate] Gagal nonaktifkan:', updateError.message);
+                        showToast('Gagal nonaktifkan jadwal otomatis: ' + updateError.message, 'error');
+                    } else {
+                        // Notif toast langsung — Realtime channel juga akan trigger refresh tabel
                         const mapelList = mapelToDeactivate.slice(0, 2).join(', ');
                         const sisanya = mapelToDeactivate.length > 2 ? ` +${mapelToDeactivate.length - 2} lainnya` : '';
-                        showToast(
-                            `${idsToDeactivate.length} mapel dinonaktifkan otomatis: ${mapelList}${sisanya}`,
-                            'info'
-                        );
-
-                        // Jika tab Penjadwalan sedang aktif, reload tabelnya
-                        if (document.getElementById('jadwal') && document.getElementById('jadwal').classList.contains('active')) {
-                            loadJadwal();
-                        }
-
-                        // Perbarui juga stat dashboard
-                        updateDashboardStats();
-                        loadDashboardJadwalAktif();
+                        showToast(`Waktu habis! "${mapelList}${sisanya}" dinonaktifkan otomatis`, 'info');
+                        _watchedJadwal = _watchedJadwal.filter(j => !idsToDeactivate.includes(j.id));
                     }
                 }
 
-                // Jadwalkan timer berikutnya tepat saat jadwal aktif terdekat berakhir
+                // Precision timer → tepat saat jadwal terdekat berakhir
                 if (nextEndTime !== Infinity) {
-                    const delayMs = Math.max(1000, nextEndTime - Date.now() + 500); // +500ms safety gap
-                    console.log(`[AutoDeactivate] Timer berikutnya: ${Math.round(delayMs / 1000)}s lagi`);
+                    const delayMs = Math.max(500, nextEndTime - Date.now() + 300);
+                    console.log(`[AutoDeactivate] ✅ Memantau ${_watchedJadwal.length} jadwal. Timer: ${Math.round(delayMs / 1000)}s lagi`);
                     _autoDeactivateTimer = setTimeout(scheduleNextAutoDeactivate, delayMs);
+                } else {
+                    console.log('[AutoDeactivate] Tidak ada jadwal aktif yang dipantau.');
                 }
-                // Jika tidak ada jadwal aktif yang tersisa → tidak ada timer dipasang (hemat resource)
 
             } catch (err) {
                 console.warn('[AutoDeactivate] Error:', err);
             }
         }
 
+        // Safety interval: setiap 3 detik cek cache lokal TANPA query DB
+        // Sebagai fallback jika precision timer browser di-throttle (tab background)
+        setInterval(() => {
+            if (_watchedJadwal.length === 0) return;
+            const now = Date.now();
+            if (_watchedJadwal.some(j => now >= j.endTime)) {
+                console.log('[AutoDeactivate] Safety check: ada yang expired, trigger deactivate...');
+                scheduleNextAutoDeactivate();
+            }
+        }, 3000);
+
+        // Supabase Realtime: dengarkan perubahan tabel jadwal_ujian secara langsung
+        // Ini memastikan SEMUA tab admin langsung dapat notif tanpa polling
+        let _jadwalRealtimeChannel = null;
+        function startJadwalRealtime() {
+            if (_jadwalRealtimeChannel) { db.removeChannel(_jadwalRealtimeChannel); }
+            _jadwalRealtimeChannel = db.channel('jadwal-realtime-watch')
+                .on('postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'jadwal_ujian' },
+                    payload => {
+                        const prev = payload.old || {};
+                        const next = payload.new || {};
+                        // Kalau is_aktif berubah dari true → false (dari tab lain atau server)
+                        if (prev.is_aktif === true && next.is_aktif === false) {
+                            // Cek apakah ini bukan dari tab kita sendiri (sudah notif via showToast di atas)
+                            if (!_deactivatingIds.has(next.id)) {
+                                showToast(`⏰ "${next.mapel}" dinonaktifkan otomatis`, 'info');
+                            }
+                            // Refresh UI
+                            if (document.getElementById('jadwal') && document.getElementById('jadwal').classList.contains('active')) {
+                                loadJadwal();
+                            }
+                            updateDashboardStats();
+                            loadDashboardJadwalAktif();
+                            // Refresh jadwal timer setelah ada perubahan
+                            scheduleNextAutoDeactivate();
+                        } else if (prev.is_aktif === false && next.is_aktif === true) {
+                            // Jadwal baru diaktifkan → pantau
+                            scheduleNextAutoDeactivate();
+                        }
+                    }
+                )
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'jadwal_ujian' },
+                    () => scheduleNextAutoDeactivate()
+                )
+                .subscribe(status => {
+                    console.log('[JadwalRealtime]', status);
+                });
+        }
+
         // Jalankan pertama kali saat halaman dibuka
         scheduleNextAutoDeactivate();
+
+        // Fallback: re-check saat tab browser kembali ke foreground
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                scheduleNextAutoDeactivate();
+            }
+        });
 
         // Load data pertama kali aplikasi dibuka
         loadNilaiSiswa();
