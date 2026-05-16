@@ -2321,6 +2321,21 @@
         /* ==================== INTI SISTEM ==================== */
         console.log("Script Siswa Loaded - v1.1");
 
+        // ===== GLOBAL: Helper Request Aman (Retry + Exponential Backoff) =====
+        // Bisa dipakai di mulaiUjian, submitJawaban, dan fungsi apapun
+        const safeDbCall = async (fn, maxRetries = 3) => {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    return await fn();
+                } catch (err) {
+                    if (i === maxRetries - 1) throw err;
+                    const delay = Math.pow(2, i) * 1000; // 1s → 2s → 4s
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            }
+        };
+
+
         // Fungsi awal untuk masuk aplikasi dari start-overlay
         function masukAplikasi() {
             const elem = document.documentElement;
@@ -2567,9 +2582,11 @@
             const k = document.getElementById('kelas').value;
 
             // --- VALIDASI AWAL: CEK APAKAH SUDAH SELESAI ---
-            const { data: sudahSelesai } = await db.from('jawaban_ujian')
-                .select('id').eq('nama', n).eq('kelas', k).eq('mapel', m)
-                .like('status', 'SELESAI%').maybeSingle();
+            const { data: sudahSelesai } = await safeDbCall(() => 
+                db.from('jawaban_ujian')
+                    .select('id').eq('nama', n).eq('kelas', k).eq('mapel', m)
+                    .like('status', 'SELESAI%').maybeSingle()
+            );
 
             if (sudahSelesai) {
                 tutupModal();
@@ -2580,7 +2597,14 @@
             const btnMulai = document.querySelector("#modalPeringatan .btn-modal-confirm");
             if (btnMulai.disabled) return;
             btnMulai.disabled = true;
-            btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Memuat...`;
+            btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Menyiapkan...`;
+
+            // --- SOLUSI HIGH TRAFFIC: JITTER & RETRY ---
+            // 1. Jitter: Delay acak 0-2.5 detik agar tidak semua siswa hit server di milidetik yang sama
+            const jitter = Math.random() * 2500;
+            await new Promise(resolve => setTimeout(resolve, jitter));
+            
+            btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Menghubungkan...`;
 
             // Tutup modal konfirmasi lebih awal agar tidak bentrok dengan Swal notifikasi
             tutupModal();
@@ -2661,18 +2685,14 @@
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(updateTimer, 1000);
 
-                // Setelah 15 detik, update status ke AKTIF
-                setTimeout(async () => {
-                    if (window.idRowUjian && document.getElementById('formUjian').style.display === 'block') {
-                        // Hanya update ke AKTIF jika tombol submit belum ditekan (disabled)
-                        const btnSelesai = document.querySelector(".btn-submit");
-                        if (!btnSelesai.disabled) {
-                            await db.from('jawaban_ujian').update({
-                                status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID')
-                            }).eq('id', window.idRowUjian);
-                        }
-                    }
-                }, 15000);
+                // Status di-update sekali saja di awal (mengurangi beban server massal)
+                if (window.idRowUjian) {
+                    safeDbCall(() => 
+                        db.from('jawaban_ujian').update({
+                            status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID')
+                        }).eq('id', window.idRowUjian)
+                    ).catch(e => console.log("Silent error status update:", e));
+                }
 
                 // Auto-sync jawaban essay setiap 60 detik (Sudah Dioptimasi)
                 let lastSyncedEssay = "";
@@ -2701,9 +2721,11 @@
 
             // === REGISTRASI SESI KE DATABASE (sebelum soal diambil) ===
             // Ini memastikan window.idRowUjian selalu ada sebelum exam dimulai
-            const { data: existing } = await db.from('jawaban_ujian')
-                .select('id, status').eq('nama', n).eq('kelas', k).eq('mapel', m)
-                .not('status', 'like', 'SELESAI%').maybeSingle();
+            const { data: existing } = await safeDbCall(() => 
+                db.from('jawaban_ujian')
+                    .select('id, status').eq('nama', n).eq('kelas', k).eq('mapel', m)
+                    .not('status', 'like', 'SELESAI%').maybeSingle()
+            );
 
             if (existing) {
                 // Proteksi Login Ganda
@@ -3195,8 +3217,9 @@
 
                 // 1.5 VALIDASI: CEK APAKAH SESI MASIH VALID (BELUM DI-RESET ADMIN)
                 if (window.idRowUjian) {
-                    const { data: cekSesi } = await db.from('jawaban_ujian')
-                        .select('id').eq('id', window.idRowUjian).maybeSingle();
+                    const { data: cekSesi } = await safeDbCall(() =>
+                        db.from('jawaban_ujian').select('id').eq('id', window.idRowUjian).maybeSingle()
+                    ).catch(() => ({ data: null }));
                     if (!cekSesi) {
                         document.getElementById('overlaySubmit').style.display = 'none';
                         btnSelesai.disabled = false;
@@ -3218,30 +3241,29 @@
                 }
 
                 // 2. PANGGIL FUNGSI KOREKSI DI DALAM DATABASE (SUPABASE RPC)
-                db.rpc('koreksi_dan_submit', {
-                    p_id_row: window.idRowUjian || null,
-                    p_nama: n,
-                    p_kelas: k,
-                    p_mapel: m,
-                    p_jawaban: payloadJawaban,
-                    p_pelanggaran: p_count,
-                    p_durasi: dur,
-                    p_status: statusSelesai
-                })
-                    .then(({ error }) => {
-                        if (error) throw error;
-                        successHandler();
-                    })
-                    .catch(err => {
-                        if (attemptSubmit < maxAttemptsSubmit) {
-                            setTimeout(sendSubmitRequest, 2500);
-                        } else {
-                            tampilkanErrorJaringan("Gagal menyimpan jawaban: " + err.message);
-                            document.getElementById('overlaySubmit').style.display = 'none';
-                            btnSelesai.disabled = false;
-                            btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
-                        }
-                    });
+                // Dengan exponential backoff: retry setiap 1s → 2s → 4s → 8s → 16s
+                try {
+                    const { error } = await safeDbCall(() =>
+                        db.rpc('koreksi_dan_submit', {
+                            p_id_row: window.idRowUjian || null,
+                            p_nama: n,
+                            p_kelas: k,
+                            p_mapel: m,
+                            p_jawaban: payloadJawaban,
+                            p_pelanggaran: p_count,
+                            p_durasi: dur,
+                            p_status: statusSelesai
+                        }),
+                        maxAttemptsSubmit // Gunakan maxAttempts sebagai maxRetries
+                    );
+                    if (error) throw error;
+                    successHandler();
+                } catch (err) {
+                    tampilkanErrorJaringan("Gagal menyimpan jawaban setelah beberapa kali percobaan: " + err.message);
+                    document.getElementById('overlaySubmit').style.display = 'none';
+                    btnSelesai.disabled = false;
+                    btnSelesai.innerHTML = `<i class="fas fa-paper-plane"></i><span>Selesai &amp; Kirim Jawaban</span>`;
+                }
             };
 
             sendSubmitRequest();
