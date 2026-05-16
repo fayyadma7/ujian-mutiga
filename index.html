@@ -1850,6 +1850,25 @@
         body:not(.anim-started) .particle {
             animation-play-state: paused !important;
         }
+        .modern-swal-popup {
+            border-radius: 16px !important;
+            padding: 24px !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        .modern-swal-title {
+            font-size: 22px !important;
+            font-weight: 700 !important;
+            color: #1e293b !important;
+        }
+
+        .modern-swal-btn {
+            border-radius: 8px !important;
+            padding: 10px 24px !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.5px !important;
+            transition: all 0.2s ease !important;
+        }
     </style>
 </head>
 
@@ -2583,10 +2602,34 @@
 
                 // Cek dulu apakah sudah ada baris untuk siswa ini (resume ujian)
                 const { data: existing } = await db.from('jawaban_ujian')
-                    .select('id').eq('nama', n).eq('kelas', k).eq('mapel', m)
+                    .select('id, status').eq('nama', n).eq('kelas', k).eq('mapel', m)
                     .not('status', 'like', 'SELESAI%').maybeSingle();
 
                 if (existing) {
+                    // Proteksi Login Ganda (Simultaneous Login Block)
+                    const idUserLocal = n.replace(/\s/g, '') + "_" + m.replace(/\s/g, '');
+                    const adaLocalProgress = localStorage.getItem("asas_" + idUserLocal) || localStorage.getItem("waktu_mulai_" + idUserLocal);
+                    
+                    // Jika di database statusnya masih berjalan (bukan selesai), 
+                    // tapi di perangkat ini TIDAK ADA history lokalnya, berarti ini perangkat BERBEDA!
+                    if (!adaLocalProgress) {
+                        Swal.fire({
+                            title: 'Akses Ditolak!',
+                            html: '<span style="font-size: 15px; color: #475569;">Akun ini sedang digunakan untuk ujian di perangkat/browser lain. Minta pengawas untuk <b>mereset</b> data Anda di Live Monitoring jika ingin mengulang.</span>',
+                            icon: 'error',
+                            confirmButtonColor: '#ef4444',
+                            confirmButtonText: 'Kembali',
+                            customClass: {
+                                popup: 'modern-swal-popup',
+                                title: 'modern-swal-title',
+                                confirmButton: 'modern-swal-btn'
+                            }
+                        });
+                        btnMulai.disabled = false;
+                        btnMulai.innerHTML = 'Mulai Ujian <i class="fas fa-arrow-right"></i>';
+                        return;
+                    }
+
                     window.idRowUjian = existing.id;
                     // Update status ke aktif jika resume
                     await db.from('jawaban_ujian').update({
@@ -2607,13 +2650,18 @@
                 // Setelah 15 detik, update status ke AKTIF
                 setTimeout(async () => {
                     if (window.idRowUjian && document.getElementById('formUjian').style.display === 'block') {
-                        await db.from('jawaban_ujian').update({
-                            status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID')
-                        }).eq('id', window.idRowUjian);
+                        // Hanya update ke AKTIF jika tombol submit belum ditekan (disabled)
+                        const btnSelesai = document.querySelector(".btn-submit");
+                        if (!btnSelesai.disabled) {
+                            await db.from('jawaban_ujian').update({
+                                status: 'AKTIF - ' + new Date().toLocaleTimeString('id-ID')
+                            }).eq('id', window.idRowUjian);
+                        }
                     }
                 }, 15000);
 
-                // Auto-sync jawaban essay setiap 60 detik
+                // Auto-sync jawaban essay setiap 60 detik (Sudah Dioptimasi)
+                let lastSyncedEssay = "";
                 setInterval(async () => {
                     if (window.idRowUjian && document.getElementById('formUjian').style.display === 'block') {
                         let jawabanEssaySync = [];
@@ -2624,10 +2672,13 @@
                             }
                         });
 
-                        if (jawabanEssaySync.length > 0) {
+                        const currentEssay = jawabanEssaySync.join("\n");
+                        // Hanya kirim ke Supabase JIKA ada perubahan jawaban (hemat limit)
+                        if (currentEssay && currentEssay !== lastSyncedEssay) {
                             await db.from('jawaban_ujian').update({
-                                jawaban_essay: jawabanEssaySync.join("\n")
+                                jawaban_essay: currentEssay
                             }).eq('id', window.idRowUjian);
+                            lastSyncedEssay = currentEssay;
                             console.log("Auto-sync: Jawaban essay berhasil dicadangkan.");
                         }
                     }
@@ -2643,12 +2694,11 @@
                     btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptGet}/${maxAttemptsGet})...`;
                 }
 
-                db.from('bank_soal').select('*').eq('mapel', m).order('id', { ascending: true })
+                db.from('bank_soal').select('id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, tipe_soal').eq('mapel', m).order('id', { ascending: true })
                     .then(({ data, error }) => {
                         if (error) throw error;
 
                         // Mapping kolom Supabase ke format array yang dipakai renderSoal:
-                        // s[0]=pertanyaan, s[1]=opsiA, s[2]=B, s[3]=C, s[4]=D, s[5]=E, s[7]=kunci, s[8]=tipe
                         let formattedData = data.map((row) => {
                             return [
                                 row.pertanyaan || "",    // s[0] = teks soal
@@ -2657,8 +2707,8 @@
                                 row.opsi_c || "",        // s[3] = Opsi C
                                 row.opsi_d || "",        // s[4] = Opsi D
                                 row.opsi_e || "",        // s[5] = Opsi E
-                                "",                      // s[6] = (tidak dipakai)
-                                row.kunci_jawaban || "", // s[7] = Kunci Jawaban
+                                row.id,                  // s[6] = ID Soal (PENTING untuk RPC)
+                                "",                      // s[7] = Kunci Jawaban (DIHAPUS, aman dari inspect element!)
                                 row.tipe_soal || "PG"    // s[8] = Tipe Soal
                             ];
                         });
@@ -3050,55 +3100,33 @@
                     btnSelesai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptSubmit}/${maxAttemptsSubmit})...`;
                 }
 
-                // 1. KOREKSI JAWABAN OTOMATIS (Karena Supabase tidak punya script backend)
-                let skorPG = 0;
-                let totalPG = 0;
-                let jawabanEssay = [];
-
+                // 1. SUSUN PAYLOAD JAWABAN UNTUK DIKIRIM KE SERVER
+                let payloadJawaban = [];
                 s_data.forEach((s, i) => {
-                    let jwbSiswa = jwb[i] || "";
-                    let kunci = s[7] || "";
-                    let tipe = s[8] || "PG";
-
-                    if (tipe === "PG") {
-                        totalPG++;
-                        if (String(jwbSiswa).trim().toUpperCase() === String(kunci).trim().toUpperCase()) {
-                            skorPG++;
-                        }
-                    } else {
-                        jawabanEssay.push("No." + (i + 1) + ": " + jwbSiswa);
-                    }
+                    payloadJawaban.push({
+                        id: s[6],       // ID soal dari database
+                        tipe: s[8],     // PG atau ESSAY
+                        jawaban: jwb[i] || ""
+                    });
                 });
 
-                const hasilSkor = totalPG > 0 ? Math.round((skorPG / totalPG) * 100) : 0;
                 const statusSelesai = "SELESAI - " + new Date().toLocaleTimeString('id-ID');
 
-                // 2. UPDATE BARIS DI SUPABASE (baris sudah ada sejak mulai ujian)
-                const payloadSelesai = {
-                    skor_pg: hasilSkor,
-                    jawaban_essay: jawabanEssay.join("\n"),
-                    pelanggaran: p_count,
-                    durasi: dur,
-                    status: statusSelesai
-                };
-
-                let dbPromise;
-                if (window.idRowUjian) {
-                    // UPDATE baris yang sudah ada (dibuat saat mulai)
-                    dbPromise = db.from('jawaban_ujian').update(payloadSelesai).eq('id', window.idRowUjian);
-                } else {
-                    // Fallback: INSERT jika id tidak tersimpan (misal reload halaman)
-                    dbPromise = db.from('jawaban_ujian').insert([{
-                        created_at: new Date().toISOString(),
-                        nama: n, kelas: k, mapel: m, ...payloadSelesai
-                    }]);
-                }
-
-                dbPromise
-                    .then(({ error }) => {
-                        if (error) throw error;
-                        successHandler();
-                    })
+                // 2. PANGGIL FUNGSI KOREKSI DI DALAM DATABASE (SUPABASE RPC)
+                db.rpc('koreksi_dan_submit', {
+                    p_id_row: window.idRowUjian || null,
+                    p_nama: n,
+                    p_kelas: k,
+                    p_mapel: m,
+                    p_jawaban: payloadJawaban,
+                    p_pelanggaran: p_count,
+                    p_durasi: dur,
+                    p_status: statusSelesai
+                })
+                .then(({ error }) => {
+                    if (error) throw error;
+                    successHandler();
+                })
                     .catch(err => {
                         if (attemptSubmit < maxAttemptsSubmit) {
                             setTimeout(sendSubmitRequest, 2500);
@@ -3150,6 +3178,9 @@
             } catch (e) {
                 console.log("Fullscreen request failed:", e);
             }
+
+            // Kembalikan status ke AKTIF di database agar admin tahu siswa sudah kembali
+            kirimSinyalAktif(false);
 
             setTimeout(() => { isViolating = false; }, 1000);
         }
