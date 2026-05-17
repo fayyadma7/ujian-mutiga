@@ -1249,9 +1249,9 @@
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.09);
             border-radius: 12px;
-            padding: 12px 16px;
+            padding: 16px;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
@@ -1302,7 +1302,6 @@
             transition: all 0.25s;
             position: relative;
             z-index: 1;
-            margin-top: 2px;
         }
 
         .option-item.selected .option-key {
@@ -1320,6 +1319,11 @@
             z-index: 1;
             transition: color 0.25s;
             flex: 1;
+        }
+
+        .option-label p {
+            margin: 0;
+            padding: 0;
         }
 
         .option-item.selected .option-label {
@@ -2597,17 +2601,12 @@
             const btnMulai = document.querySelector("#modalPeringatan .btn-modal-confirm");
             if (btnMulai.disabled) return;
             btnMulai.disabled = true;
-            btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Menyiapkan...`;
+            btnMulai.innerHTML = `<i class="fas fa-circle-notch fa-spin" style="margin-right: 6px;"></i> Menyiapkan...`;
 
             // --- SOLUSI HIGH TRAFFIC: JITTER & RETRY ---
             // 1. Jitter: Delay acak 0-2.5 detik agar tidak semua siswa hit server di milidetik yang sama
             const jitter = Math.random() * 2500;
             await new Promise(resolve => setTimeout(resolve, jitter));
-            
-            btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Menghubungkan...`;
-
-            // Tutup modal konfirmasi lebih awal agar tidak bentrok dengan Swal notifikasi
-            tutupModal();
 
             // Force fullscreen
             const elem = document.documentElement;
@@ -2635,6 +2634,7 @@
             const keyDurasi = "durasi_" + idUser;
 
             const startHandler = async (data) => {
+                tutupModal(); // Tutup modal saat soal sudah siap ditampilkan
 
                 const savedUrutan = localStorage.getItem(keyUrutan);
                 if (savedUrutan) {
@@ -2734,6 +2734,7 @@
                     localStorage.getItem("asas_" + idUserLocal) ||
                     localStorage.getItem("waktu_mulai_" + idUserLocal);
                 if (!adaLocalProgress) {
+                    tutupModal();
                     Swal.fire({
                         title: 'Akses Ditolak!',
                         html: '<span style="font-size: 15px; color: #475569;">Akun ini sedang digunakan untuk ujian di perangkat/browser lain. Minta pengawas untuk <b>mereset</b> data Anda di Live Monitoring jika ingin mengulang.</span>',
@@ -2743,7 +2744,7 @@
                         customClass: { popup: 'modern-swal-popup', title: 'modern-swal-title', confirmButton: 'modern-swal-btn' }
                     });
                     btnMulai.disabled = false;
-                    btnMulai.innerHTML = 'Mulai Ujian <i class="fas fa-arrow-right"></i>';
+                    btnMulai.innerHTML = 'Ya, Mulai!';
                     return;
                 }
                 window.idRowUjian = existing.id;
@@ -2759,6 +2760,7 @@
                     localStorage.getItem("asas_" + idUserLocal) ||
                     localStorage.getItem("waktu_mulai_" + idUserLocal);
                 if (adaLocalProgress) {
+                    tutupModal();
                     // Tampilkan notifikasi DULU, baru bersihkan localStorage
                     await Swal.fire({
                         title: 'Sesi Ujian Direset!',
@@ -2798,7 +2800,7 @@
             const sendGetRequest = () => {
                 attemptGet++;
                 if (attemptGet > 1) {
-                    btnMulai.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Mencoba ulang (${attemptGet}/${maxAttemptsGet})...`;
+                    btnMulai.innerHTML = `<i class="fas fa-circle-notch fa-spin" style="margin-right: 6px;"></i> Mengulang (${attemptGet}/${maxAttemptsGet})...`;
                 }
 
                 db.from('bank_soal').select('id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, tipe_soal').eq('mapel', m).order('id', { ascending: true })
@@ -2825,6 +2827,7 @@
                         if (attemptGet < maxAttemptsGet) {
                             setTimeout(sendGetRequest, 2500);
                         } else {
+                            tutupModal();
                             tampilkanErrorJaringan("Gagal memuat soal: " + err.message);
                             btnMulai.disabled = false;
                             btnMulai.innerHTML = "Ya, Mulai!";
