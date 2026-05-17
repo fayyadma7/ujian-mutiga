@@ -12,6 +12,9 @@
     <!-- Font Inter & FontAwesome Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Library Supabase & Excel Parser (SheetJS) & Word Parser (Mammoth) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1926,6 +1929,19 @@
         }
 
         async function hapusSatuMapel(mapel) {
+            // CEK APAKAH MAPEL ADA DI JADWAL UJIAN
+            const { data: jadwalAktif } = await db.from('jadwal_ujian').select('id').eq('mapel', mapel);
+            if (jadwalAktif && jadwalAktif.length > 0) {
+                Swal.fire({
+                    title: 'Akses Ditolak!',
+                    html: `Mata pelajaran <b style="color:var(--primary);">${mapel}</b> sedang digunakan di <b>Jadwal Ujian</b>.<br><br>Sistem memblokir tindakan ini agar ujian siswa tidak <i>error/blank</i>. Hapus jadwalnya terlebih dahulu di tab Jadwal.`,
+                    icon: 'error',
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Mengerti'
+                });
+                return;
+            }
+
             if (!await asyncConfirm(`Hapus <b>SEMUA SOAL</b> untuk mata pelajaran <b>"${mapel}"</b>?<br>Tindakan ini menghapus seluruh data bank soal untuk mapel ini.`, "Hapus Seluruh Mapel?")) return;
 
             const { error } = await db.from('bank_soal').delete().eq('mapel', mapel);
@@ -1942,6 +1958,20 @@
             if (mapels.length === 0) return showToast("Pilih minimal satu mata pelajaran!", 'info');
 
             if (action === 'delete') {
+                // CEK APAKAH MAPEL-MAPEL INI ADA DI JADWAL UJIAN
+                const { data: jadwalAktif } = await db.from('jadwal_ujian').select('mapel').in('mapel', mapels);
+                if (jadwalAktif && jadwalAktif.length > 0) {
+                    const usedMapels = [...new Set(jadwalAktif.map(j => j.mapel))].join(', ');
+                    Swal.fire({
+                        title: 'Tindakan Diblokir!',
+                        html: `Mata pelajaran berikut sedang digunakan di <b>Jadwal Ujian</b>:<br><br><b style="color:var(--primary);">${usedMapels}</b><br><br>Sistem memblokir tindakan ini untuk mencegah kerusakan ujian. Hapus jadwal terkait terlebih dahulu.`,
+                        icon: 'error',
+                        confirmButtonColor: '#ef4444',
+                        confirmButtonText: 'Mengerti'
+                    });
+                    return;
+                }
+
                 if (!await asyncConfirm(`Hapus <b>${mapels.length} mata pelajaran</b> terpilih beserta seluruh soalnya?<br>Tindakan ini tidak bisa dibatalkan.`, "Hapus Bank Soal?")) return;
 
                 const { error } = await db.from('bank_soal').delete().in('mapel', mapels);
